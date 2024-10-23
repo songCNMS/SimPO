@@ -1,14 +1,14 @@
 from vllm import LLM, SamplingParams
 from datasets import load_dataset, load_from_disk
 import os
-os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER" # this is recommended for gemma-2 models; otherwise it is not needed
+# os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER" # this is recommended for gemma-2 models; otherwise it is not needed
 import argparse
 import json
 
 parser = argparse.ArgumentParser(description='Decode with vllm')
 parser.add_argument('--data_dir', type=str, default="HuggingFaceH4/ultrafeedback_binarized",
                     help='Directory containing the data')
-parser.add_argument('--model', type=str, default="google/gemma-2-9b-it",
+parser.add_argument('--model', type=str, default="meta-llama/Llama-3.1-8B-Instruct",
                     help='Path to the LLM model')
 parser.add_argument('--temperature', type=float, default=0.8,
                     help='Temperature for sampling')
@@ -18,7 +18,7 @@ parser.add_argument('--max_tokens', type=int, default=4096,
                     help='Maximum number of tokens to generate')
 parser.add_argument('--seed', type=int, default=42,
                     help='Random seed')
-parser.add_argument('--output_dir', type=str, default="datasets/gemma2_ultrafeedback",
+parser.add_argument('--output_dir', type=str, default="datasets/llama3.1_8B_ultrafeedback",
                     help='output_dir')
 args = parser.parse_args()
 

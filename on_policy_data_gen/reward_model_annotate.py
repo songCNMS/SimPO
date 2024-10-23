@@ -9,9 +9,9 @@ import numpy as np
 import datasets
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--generation_file", type=str, default="datasets/gemma2_ultrafeedback/all_outputs.json", help="Path to the output generation file")
+parser.add_argument("--generation_file", type=str, default="datasets/llama3.1_8B_ultrafeedback/all_outputs.json", help="Path to the output generation file")
 parser.add_argument("--reward_model", type=str, default="RLHFlow/ArmoRM-Llama3-8B-v0.1", help="Path to reward model")
-parser.add_argument("--output_dir", type=str, default="datasets/gemma2_ultrafeedback/", help="Path to output directory")
+parser.add_argument("--output_dir", type=str, default="datasets/llama3.1_8B_ultrafeedback/", help="Path to output directory")
 args = parser.parse_args()
 
 print(args)

@@ -158,6 +158,7 @@ Please refer to the [generate.py](generate.py) script for detailed instructions 
 Our codebase is built upon the [alignment-handbook repo](https://github.com/huggingface/alignment-handbook). The following steps will guide you through the installation process.
 
 First, create a Python virtual environment using e.g. Conda:
+conda create -n handbook python=3.10 && conda activate handbook
 ```shell
 conda create -n handbook python=3.10 && conda activate handbook
 ```
