@@ -38,18 +38,31 @@ ref_tokenizer = ref_llm.get_tokenizer()
 
 
 output_data = []
+d_prompts = []
+dbar_prompts = []
 with jsonlines.open("all_train_data.json") as reader:
     for obj in reader:
         if obj["type"] == "D":
-            conversations = [ref_tokenizer.apply_chat_template([{'role': 'user', 'content': obj["prompt"]}], tokenize=False, add_generation_prompt=True)]
-            sampling_params = SamplingParams(temperature=args.temperature, 
-                                            top_p=args.top_p, 
-                                            max_tokens=args.max_tokens, 
-                                            seed=args.seed,)
-            outputs = ref_llm.generate(conversations, sampling_params)
+            d_prompts.append(obj["prompt"])
+        else:
+            dbar_prompts.append(obj["prompt"])
+            
+            
+d_prompts = sorted(list(set(d_prompts)))
+dbar_prompts = sorted(list(set(dbar_prompts)))
 
-            obj["rejected"][1]["content"] = outputs[0]
-            output_data.append(obj)
+prompt_resp_dict = {}
+
+conversations = [ref_tokenizer.apply_chat_template([{'role': 'user', 'content': prompt}], tokenize=False, add_generation_prompt=True) for prompt in d_prompts]
+sampling_params = SamplingParams(temperature=args.temperature, 
+                                top_p=args.top_p, 
+                                max_tokens=args.max_tokens, 
+                                seed=args.seed,)
+outputs = ref_llm.generate(conversations, sampling_params)
+
+for i, output in enumerate(outputs):
+    prompt_resp_dict[d_prompts[i]] = output
+
 
 
 del ref_llm
@@ -58,17 +71,23 @@ del ref_tokenizer
 train_llm = LLM(model=train_model)
 train_tokenizer = train_llm.get_tokenizer()
 
+conversations = [train_tokenizer.apply_chat_template([{'role': 'user', 'content': prompt}], tokenize=False, add_generation_prompt=True) for prompt in dbar_prompts]
+sampling_params = SamplingParams(temperature=args.temperature, 
+                                top_p=args.top_p, 
+                                max_tokens=args.max_tokens, 
+                                seed=args.seed,)
+outputs = train_llm.generate(conversations, sampling_params)
+
+for i, output in enumerate(outputs):
+    prompt_resp_dict[dbar_prompts[i]] = output
+    
+    
+
+
 with jsonlines.open("all_train_data.json") as reader:
     for obj in reader:
-        if obj["type"] == "DBAR":
-            conversations = [train_tokenizer.apply_chat_template([{'role': 'user', 'content': obj["prompt"]}], tokenize=False, add_generation_prompt=True)]
-            sampling_params = SamplingParams(temperature=args.temperature, 
-                                            top_p=args.top_p, 
-                                            max_tokens=args.max_tokens, 
-                                            seed=args.seed,)
-            outputs = train_llm.generate(conversations, sampling_params)
-            obj["rejected"][1]["content"] = outputs[0]
-            output_data.append(obj)
+        obj["rejected"][1]["content"] = prompt_resp_dict[obj["prompt"]]
+        output_data.append(obj)
 
 
 output_file = f'all_train_data_{args.epoch}.json'
