@@ -20,7 +20,7 @@ from transformers.trainer_callback import TrainerCallback
 from transformers.trainer_utils import EvalLoopOutput
 from transformers.utils import is_torch_fx_proxy
 
-from trl.import_utils import is_peft_available, is_wandb_available
+# from trl.import_utils import is_peft_available, is_wandb_available
 from simpo_config import SimPOConfig
 
 from dataclasses import dataclass
@@ -36,11 +36,14 @@ from trl.trainer.utils import (
     trl_sanitze_kwargs_for_tagging,
 )
 
-if is_peft_available():
-    from peft import PeftModel, get_peft_model, prepare_model_for_kbit_training
+def is_peft_available():
+    return True
 
-if is_wandb_available():
-    import wandb
+from peft import PeftModel, get_peft_model, prepare_model_for_kbit_training
+
+def is_wandb_available():
+    return True
+import wandb
 
 
 class SimPOTrainer(Trainer):

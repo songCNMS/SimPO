@@ -104,10 +104,10 @@ def apply_chat_template(
 
             example["text_prompt"] = tokenizer.apply_chat_template(prompt_messages, tokenize=False)
             example["text_chosen"] = tokenizer.apply_chat_template(chosen_messages, tokenize=False)
-            if example["text_chosen"].startswith(tokenizer.bos_token):
+            if tokenizer.bos_token and example["text_chosen"].startswith(tokenizer.bos_token):
                 example["text_chosen"] = example["text_chosen"][len(tokenizer.bos_token):]
             example["text_rejected"] = tokenizer.apply_chat_template(rejected_messages, tokenize=False)
-            if example["text_rejected"].startswith(tokenizer.bos_token):
+            if tokenizer.bos_token and example["text_rejected"].startswith(tokenizer.bos_token):
                 example["text_rejected"] = example["text_rejected"][len(tokenizer.bos_token):]
         else:
             raise ValueError(
@@ -121,10 +121,11 @@ def apply_chat_template(
     return example
 
 
-def main():
+def main(ep=1):
     parser = H4ArgumentParser((ModelArguments, DataArguments, SimPOConfig))
     model_args, data_args, training_args = parser.parse()
-
+    training_args.output_dir = training_args.output_dir + f"_{ep}"
+    
     #######
     # Setup
     #######
@@ -298,6 +299,7 @@ def main():
     ##########
     # Evaluate
     ##########
+    metrics = {}
     if training_args.do_eval:
         logger.info("*** Evaluate ***")
         metrics = trainer.evaluate()
@@ -310,7 +312,28 @@ def main():
         trainer.push_to_hub(**kwargs)
 
     logger.info("*** Training complete! ***")
+    return metrics, training_args.output_dir
+
+import os
 
 
 if __name__ == "__main__":
-    main()
+    
+    epoch = 5
+
+    metrics_list = []
+
+    train_model = "meta-llama/Llama-3.2-3B-Instruct"
+    ref_model = "meta-llama/Llama-3.2-3B-Instruct"
+    # os.system(f"python decode_data.py --train_model {train_model} --ref_model {ref_model} --epoch 1")
+
+    for ep in range(1, epoch+1):
+        print(f"EPOCH: {ep}")
+        metrics, output_dir = main(ep)
+        metrics_list.append(metrics)
+        with open("metrics.jsonl", "w") as writter:
+            writter.write_all(metrics_list)
+        train_model = output_dir
+        if ep <= epoch:
+            os.system(f"python scripts/decode_data.py --train_model {train_model} --ref_model {ref_model} --epoch {ep}")
+
