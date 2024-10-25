@@ -20,6 +20,8 @@ import sys
 import torch
 import transformers
 from transformers import AutoModelForCausalLM, set_seed
+import subprocess
+
 
 from alignment import (
     DataArguments,
@@ -40,6 +42,9 @@ from simpo_trainer import SimPOTrainer
 from simpo_config import SimPOConfig
 from dataclasses import dataclass, field
 from typing import Optional, Literal
+import jsonlines
+import os
+
 
 logger = logging.getLogger(__name__)
 
@@ -314,7 +319,6 @@ def main(ep=1):
     logger.info("*** Training complete! ***")
     return metrics, training_args.output_dir
 
-import os
 
 
 if __name__ == "__main__":
@@ -325,15 +329,16 @@ if __name__ == "__main__":
 
     train_model = "meta-llama/Llama-3.2-3B-Instruct"
     ref_model = "meta-llama/Llama-3.2-3B-Instruct"
-    # os.system(f"python decode_data.py --train_model {train_model} --ref_model {ref_model} --epoch 1")
-
+    # os.system(f"python scripts/decode_data.py --train_model {train_model} --ref_model {ref_model} --epoch 1")
+    subprocess.run(['conda', 'run', '-n', 'simpo', 'python', 'scripts/decode_data.py', "--train_model", train_model, "--ref_model", ref_model, "--epoch", "1"])
     for ep in range(1, epoch+1):
         print(f"EPOCH: {ep}")
         metrics, output_dir = main(ep)
         metrics_list.append(metrics)
-        with open("metrics.jsonl", "w") as writter:
+        with jsonlines.open("metrics.jsonl", "w") as writter:
             writter.write_all(metrics_list)
         train_model = output_dir
+        train_model = f"/home/lesong/codes/SimPO/outputs/llama-3-3b-instruct-simpo-v2_{ep}"
         if ep <= epoch:
-            os.system(f"python scripts/decode_data.py --train_model {train_model} --ref_model {ref_model} --epoch {ep}")
-
+            subprocess.run(['conda', 'run', '-n', 'simpo', 'python', 'scripts/decode_data.py', "--train_model", train_model, "--ref_model", ref_model, "--epoch", f"{ep+1}"])
+            # os.system(f"conda activate simpo; python scripts/decode_data.py --train_model {train_model} --ref_model {ref_model} --epoch {ep}")

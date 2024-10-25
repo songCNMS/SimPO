@@ -7,6 +7,8 @@ import json
 import jsonlines
 import numpy as np
 import datasets
+import sys
+
 
 
 parser = argparse.ArgumentParser(description='Decode with vllm')
@@ -114,3 +116,4 @@ if __name__ == "__main__":
     dataset = datasets.Dataset.from_list(output_data)
     dataset = dataset.train_test_split(test_size=0.2)
     dataset.save_to_disk(os.path.join(args.output_dir, "cpo_dataset"))
+    sys.exit(0)
