@@ -115,5 +115,5 @@ if __name__ == "__main__":
 
     dataset = datasets.Dataset.from_list(output_data)
     dataset = dataset.train_test_split(test_size=0.2)
-    dataset.save_to_disk(os.path.join(args.output_dir, "cpo_dataset"))
+    dataset.save_to_disk(os.path.join(args.output_dir, f"cpo_dataset_{args.epoch}"))
     sys.exit(0)

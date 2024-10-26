@@ -130,6 +130,7 @@ def main(ep=1):
     parser = H4ArgumentParser((ModelArguments, DataArguments, SimPOConfig))
     model_args, data_args, training_args = parser.parse()
     training_args.output_dir = training_args.output_dir + f"_{ep}"
+    data_args.dataset_mixer = {f"/home/lesong/codes/SimPO/datasets/llama3.1_8B_ultrafeedback/cpo_dataset_{ep}": 1.0}
     
     #######
     # Setup
@@ -147,8 +148,9 @@ def main(ep=1):
 
     # Log on each process the small summary:
     logger.info(f"Model parameters {model_args}")
-    logger.info(f"Data parameters {data_args}")
     logger.info(f"Training/evaluation parameters {training_args}")
+    logger.info(f"Data parameters {data_args}")
+    
 
     # Check for last checkpoint
     last_checkpoint = get_checkpoint(training_args)
@@ -162,7 +164,7 @@ def main(ep=1):
     # Load datasets
     ###############
     raw_datasets = get_datasets(
-        data_args,
+        data_args.dataset_mixer,
         splits=data_args.dataset_splits,
         configs=data_args.dataset_configs,
         columns_to_keep=["messages", "chosen", "rejected", "prompt", "completion", "label"],
@@ -323,7 +325,7 @@ def main(ep=1):
 
 if __name__ == "__main__":
     
-    epoch = 5
+    epoch = 10
 
     metrics_list = []
 
@@ -337,7 +339,6 @@ if __name__ == "__main__":
         metrics_list.append(metrics)
         with jsonlines.open("metrics.jsonl", "w") as writter:
             writter.write_all(metrics_list)
-        train_model = output_dir
         train_model = f"/home/lesong/codes/SimPO/outputs/llama-3-3b-instruct-simpo-v2_{ep}"
         if ep <= epoch:
             subprocess.run(['conda', 'run', '-n', 'simpo', 'python', 'scripts/decode_data.py', "--train_model", train_model, "--ref_model", ref_model, "--epoch", f"{ep+1}"])
