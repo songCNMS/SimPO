@@ -332,8 +332,8 @@ if __name__ == "__main__":
     train_model = "meta-llama/Llama-3.2-3B-Instruct"
     ref_model = "meta-llama/Llama-3.2-3B-Instruct"
     # os.system(f"python scripts/decode_data.py --train_model {train_model} --ref_model {ref_model} --epoch 1")
-    subprocess.run(['conda', 'run', '-n', 'simpo', 'python', 'scripts/decode_data.py', "--train_model", train_model, "--ref_model", ref_model, "--epoch", "1"])
-    for ep in range(1, epoch+1):
+    # subprocess.run(['conda', 'run', '-n', 'simpo', 'python', 'scripts/decode_data.py', "--train_model", train_model, "--ref_model", ref_model, "--epoch", "1"], shell=True)
+    for ep in range(2, epoch+1):
         print(f"EPOCH: {ep}")
         metrics, output_dir = main(ep)
         metrics_list.append(metrics)
@@ -341,5 +341,5 @@ if __name__ == "__main__":
             writter.write_all(metrics_list)
         train_model = f"/home/lesong/codes/SimPO/outputs/llama-3-3b-instruct-simpo-v2_{ep}"
         if ep <= epoch:
-            subprocess.run(['conda', 'run', '-n', 'simpo', 'python', 'scripts/decode_data.py', "--train_model", train_model, "--ref_model", ref_model, "--epoch", f"{ep+1}"])
+            subprocess.run(['conda', 'run', '-n', 'simpo', 'python', 'scripts/decode_data.py', "--train_model", train_model, "--ref_model", ref_model, "--epoch", f"{ep+1}"], shell=True)
             # os.system(f"conda activate simpo; python scripts/decode_data.py --train_model {train_model} --ref_model {ref_model} --epoch {ep}")
