@@ -48,6 +48,7 @@ class SimPOConfig(TrainingArguments):
     """
     
     max_length: Optional[int] = None
+    epoch: Optional[int] = 1
     max_prompt_length: Optional[int] = None
     max_completion_length: Optional[int] = None
     max_target_length: Optional[int] = None
