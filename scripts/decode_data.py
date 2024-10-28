@@ -111,7 +111,7 @@ if __name__ == "__main__":
 
     def map_to_new_resp(item):
         if item["prompt"] in prompt_resp_dict:
-            item["rejected"][1]["content"] = prompt_resp_dict[obj["prompt"]]
+            item["rejected"][1]["content"] = prompt_resp_dict[item["prompt"]]
 
     dataset["train"] = dataset["train"].map(lambda item: map_to_new_resp(item))
     dataset.save_to_disk(os.path.join(args.output_dir, f"cpo_dataset_{args.epoch}"))

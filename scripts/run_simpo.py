@@ -131,6 +131,7 @@ def main(ep=1):
     model_args, data_args, training_args = parser.parse()
     training_args.output_dir = training_args.output_dir + f"_{ep}"
     data_args.dataset_mixer = {f"/home/lesong/codes/SimPO/datasets/llama3.1_8B_ultrafeedback/cpo_dataset_{ep}": 1.0}
+    training_args.resume_from_checkpoint = f"/home/lesong/codes/SimPO/outputs/llama-3-3b-instruct-simpo-v2_{ep-1}"
     
     #######
     # Setup
@@ -274,6 +275,8 @@ def main(ep=1):
         checkpoint = training_args.resume_from_checkpoint
     elif last_checkpoint is not None:
         checkpoint = last_checkpoint
+        
+    
     train_result = trainer.train(resume_from_checkpoint=checkpoint)
     metrics = train_result.metrics
     metrics["train_samples"] = len(raw_datasets["train"])
