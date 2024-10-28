@@ -46,19 +46,18 @@ if __name__ == "__main__":
     output_data = []
     d_prompts = []
     dbar_prompts = []
-
-    dataset = load_from_disk("./datasets/llama3.1_8B_ultrafeedback/cpo_dataset_1")
-    
-    
-    for item in dataset["train"]:
-        if item["type"] == "D":
-            d_prompts.append(item["prompt"])
-        else:
-            dbar_prompts.append(item["prompt"])
+    with jsonlines.open("all_train_data.json") as reader:
+        for obj in reader:
+            if obj["type"] == "D":
+                d_prompts.append(obj["prompt"])
+            else:
+                dbar_prompts.append(obj["prompt"])
                 
                 
     d_prompts = sorted(list(set(d_prompts)))
     dbar_prompts = sorted(list(set(dbar_prompts)))
+    if len(dbar_prompts) > len(d_prompts):
+        dbar_prompts = np.random.choice(dbar_prompts, size=len(d_prompts), replace=False)
 
     prompt_resp_dict = {}
 
@@ -91,6 +90,9 @@ if __name__ == "__main__":
         prompt_resp_dict[dbar_prompts[i]] = output.outputs[0].text
 
         
+        
+
+
     with jsonlines.open("all_train_data.json") as reader:
         for obj in reader:
             if obj["prompt"] in prompt_resp_dict:
@@ -102,17 +104,16 @@ if __name__ == "__main__":
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
 
+    # with open(os.path.join(args.output_dir, output_file), 'w') as f:
+    #     json.dump(output_data, f, indent=4)
+
 
     with jsonlines.open(os.path.join(args.output_dir, output_file), 'w') as writter:
         writter.write_all(output_data)
 
     print(f"Outputs saved to {os.path.join(args.output_dir, output_file)}")
-    
 
-    def map_to_new_resp(item):
-        if item["prompt"] in prompt_resp_dict:
-            item["rejected"][1]["content"] = prompt_resp_dict[obj["prompt"]]
-
-    dataset["train"] = dataset["train"].map(lambda item: map_to_new_resp(item))
+    dataset = datasets.Dataset.from_list(output_data)
+    dataset = dataset.train_test_split(test_size=0.2)
     dataset.save_to_disk(os.path.join(args.output_dir, f"cpo_dataset_{args.epoch}"))
     sys.exit(0)
