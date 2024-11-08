@@ -585,12 +585,12 @@ class SimPOTrainer(Trainer):
                 -F.logsigmoid(self.beta * logits) * (1 - self.label_smoothing)
                 - F.logsigmoid(-self.beta * logits) * self.label_smoothing
             )
-        elif self.loss_type == "hinge":
+        else: # self.loss_type == "hinge":
             losses = torch.relu(1 - self.beta * logits)
-        else:
-            raise ValueError(
-                f"Unknown loss type: {self.loss_type}. Should be one of ['sigmoid', 'hinge']"
-            )
+        # else:
+        #     raise ValueError(
+        #         f"Unknown loss type: {self.loss_type}. Should be one of ['sigmoid', 'hinge']"
+        #     )
 
         chosen_rewards = self.beta * policy_chosen_logps.to(self.accelerator.device).detach()
         rejected_rewards = self.beta * policy_rejected_logps.to(self.accelerator.device).detach()

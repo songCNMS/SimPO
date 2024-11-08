@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 from typing import Dict, Literal, Optional
 from transformers import TrainingArguments
+from trl.trainer.dpo_config import DPOConfig
 
 
 @dataclass
-class SimPOConfig(TrainingArguments):
+# class SimPOConfig(TrainingArguments):
+class SimPOConfig(DPOConfig):
     r"""
     SimPOConfig collects all training arguments related to the [`SimPOTrainer`] class.
 
@@ -67,6 +69,18 @@ class SimPOConfig(TrainingArguments):
     is_encoder_decoder: Optional[bool] = None
 
     model_init_kwargs: Optional[Dict] = None
+    ref_model_init_kwargs: Optional[Dict] = None
 
     dataset_num_proc: Optional[int] = None
 
+    # attn_implementation: str = None
+
+    trainer_type: str = "dpo"
+    ln: bool = True
+    alpha: float=0.0
+    
+    model_adapter_name: Optional[str] = None
+    ref_adapter_name: Optional[str] = None
+    reference_free: bool = False
+    force_use_ref_model: bool = False
+    precompute_ref_log_probs: bool = False

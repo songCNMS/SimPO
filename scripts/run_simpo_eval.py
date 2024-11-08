@@ -21,6 +21,7 @@ import torch
 import transformers
 from transformers import AutoModelForCausalLM, set_seed
 import subprocess
+import datasets
 
 
 from alignment import (
@@ -39,12 +40,12 @@ from alignment import (
 from alignment.data import maybe_insert_system_message, is_openai_format
 from peft import PeftConfig, PeftModel
 from simpo_trainer import SimPOTrainer
-from dpo_trainer import AlphaDPOTrainer
 from simpo_config import SimPOConfig
 from dataclasses import dataclass, field
 from typing import Optional, Literal
 import jsonlines
 import os
+from dpo_trainer import AlphaDPOTrainer
 
 
 logger = logging.getLogger(__name__)
@@ -130,13 +131,11 @@ def apply_chat_template(
 def main(ep=1):
     parser = H4ArgumentParser((ModelArguments, DataArguments, SimPOConfig))
     model_args, data_args, training_args = parser.parse()
-    output_dir = training_args.output_dir
-    training_args.output_dir = training_args.output_dir + f"/{training_args.trainer_type}_{ep}"
+    
+    # training_args.output_dir = training_args.output_dir + f"_{ep}"
     data_args.dataset_mixer = {f"/home/lesong/codes/SimPO/datasets/llama3.1_8B_ultrafeedback/{training_args.trainer_type}_dataset_{ep}": 1.0}
     ref_model = model_args.model_name_or_path
-    if ep > 1:
-        model_args.model_name_or_path = output_dir + f"/{training_args.trainer_type}_{ep-1}"
-    
+    model_args.model_name_or_path = training_args.output_dir + f"/{training_args.trainer_type}_{ep}"
     #######
     # Setup
     #######
@@ -172,18 +171,15 @@ def main(ep=1):
         data_args.dataset_mixer,
         splits=data_args.dataset_splits,
         configs=data_args.dataset_configs,
-        columns_to_keep=["messages", "chosen", "rejected", "prompt", "completion", "label", "alpha"],
+        columns_to_keep=["messages", "chosen", "rejected", "prompt", "completion", "label", "type", "alpha"],
         # seed=training_args.seed,
     )
-    
-    
     logger.info(
         f"Training on the following splits: {[split + ' : ' + str(dset.num_rows) for split, dset in raw_datasets.items()]}"
     )
     column_names = list(raw_datasets["train"].features)
-    print(column_names)
+    column_names.remove("type")
     column_names.remove("alpha")
-    
 
     #####################################
     # Load tokenizer and process datasets
@@ -212,18 +208,26 @@ def main(ep=1):
     )
 
     # Replace column names with what TRL needs, text_chosen -> chosen and text_rejected -> rejected
+    
+    
     for split in ["train", "test"]:
         raw_datasets[split] = raw_datasets[split].rename_columns(
             {"text_prompt": "prompt", "text_chosen": "chosen", "text_rejected": "rejected"}
         )
+        
+    eval_d_list = []
+    eval_dbar_list = []
+    for item in raw_datasets["test"]:
+        # if item["type"] == "D":
+        eval_d_list.append(item)
+        # else:
+        eval_dbar_list.append(item)
+            
+    eval_d_dataset = datasets.Dataset.from_list(eval_d_list)
+    eval_dbar_dataset = datasets.Dataset.from_list(eval_dbar_list)
+
+    model = model_args.model_name_or_path
     
-
-    # Log a few random samples from the training set:
-    for index in random.sample(range(len(raw_datasets["train"])), 3):
-        logger.info(f"Prompt sample {index} of the raw training set:\n\n{raw_datasets['train'][index]['prompt']}")
-        logger.info(f"Chosen sample {index} of the raw training set:\n\n{raw_datasets['train'][index]['chosen']}")
-        logger.info(f"Rejected sample {index} of the raw training set:\n\n{raw_datasets['train'][index]['rejected']}")
-
     torch_dtype = (
         model_args.torch_dtype if model_args.torch_dtype in ["auto", None] else getattr(torch, model_args.torch_dtype)
     )
@@ -238,34 +242,10 @@ def main(ep=1):
         quantization_config=quantization_config,
         attn_implementation=model_args.attn_implementation,
     )
-
-    model = model_args.model_name_or_path
-    # seems to require internet
-    # if is_adapter_model(model, model_args.model_revision) is True:
-    #     logger.info(f"Loading SFT adapter for {model_args.model_name_or_path=}")
-    #     peft_config = PeftConfig.from_pretrained(model_args.model_name_or_path, revision=model_args.model_revision)
-    #     model_kwargs = dict(
-    #         revision=model_args.base_model_revision,
-    #         trust_remote_code=model_args.trust_remote_code,
-    #         use_flash_attention_2=model_args.use_flash_attention_2,
-    #         torch_dtype=torch_dtype,
-    #         use_cache=False if training_args.gradient_checkpointing else True,
-    #         device_map=get_kbit_device_map() if quantization_config is not None else None,
-    #         quantization_config=quantization_config,
-    #     )
-    #     base_model = AutoModelForCausalLM.from_pretrained(
-    #         peft_config.base_model_name_or_path,
-    #         **model_kwargs,
-    #     )
-    #     model = PeftModel.from_pretrained(
-    #         base_model,
-    #         model_args.model_name_or_path,
-    #         revision=model_args.model_revision,
-    #     )
-    #     model_kwargs = None
-
-    training_args.model_init_kwargs = model_kwargs
     
+    print(eval_d_dataset, eval_dbar_dataset)
+    
+    training_args.model_init_kwargs = model_kwargs
     #########################
     # Instantiate SimPO trainer
     #########################
@@ -273,82 +253,65 @@ def main(ep=1):
         trainer = SimPOTrainer(
             model=model,
             args=training_args,
-            train_dataset=raw_datasets["train"],
-            eval_dataset=raw_datasets["test"],
+            train_dataset=raw_datasets["test"],
+            eval_dataset=eval_d_dataset,
             tokenizer=tokenizer,
             peft_config=get_peft_config(model_args),
         )
     else:
-        # training_args.ref_model_init_kwargs = model_kwargs
+        training_args.ref_model_init_kwargs = model_kwargs
         trainer = AlphaDPOTrainer(
                 model=model,
-                ref_model=ref_model,
+                ref_model=model,
                 args=training_args,
-                train_dataset=raw_datasets["train"],
-                eval_dataset=raw_datasets["test"],
+                train_dataset=raw_datasets["test"],
+                eval_dataset=eval_d_dataset,
                 tokenizer=tokenizer,
                 peft_config=get_peft_config(model_args),
-                max_length=training_args.max_length,
-                max_prompt_length=training_args.max_prompt_length,
-                loss_type=training_args.loss_type,
             )
-
-    ###############
-    # Training loop
-    ###############
-    checkpoint = None
-    if training_args.resume_from_checkpoint is not None:
-        checkpoint = training_args.resume_from_checkpoint
-    elif last_checkpoint is not None:
-        checkpoint = last_checkpoint
-        
-    print("loading from: ", checkpoint)
-    train_result = trainer.train(resume_from_checkpoint=checkpoint)
-    metrics = train_result.metrics
-    metrics["train_samples"] = len(raw_datasets["train"])
-    trainer.log_metrics("train", metrics)
-    trainer.save_metrics("train", metrics)
-    trainer.save_state()
-
-    logger.info("*** Training complete ***")
-
-    ##################################
-    # Save model and create model card
-    ##################################
-    logger.info("*** Save model ***")
-    trainer.save_model(training_args.output_dir)
-    logger.info(f"Model saved to {training_args.output_dir}")
-
-    # Save everything else on main process
-    kwargs = {
-        "finetuned_from": model_args.model_name_or_path,
-        "dataset": list(data_args.dataset_mixer.keys()),
-        "dataset_tags": list(data_args.dataset_mixer.keys()),
-        "tags": ["alignment-handbook"],
-    }
-    if trainer.accelerator.is_main_process:
-        trainer.create_model_card(**kwargs)
-        # Restore k,v cache for fast inference
-        trainer.model.config.use_cache = True
-        trainer.model.config.save_pretrained(training_args.output_dir)
+    
 
     ##########
     # Evaluate
     ##########
-    metrics = {}
-    if training_args.do_eval:
-        logger.info("*** Evaluate ***")
-        metrics = trainer.evaluate()
-        metrics["eval_samples"] = len(raw_datasets["test"])
-        trainer.log_metrics("eval", metrics)
-        trainer.save_metrics("eval", metrics)
+    logger.info("*** Evaluate D***")
+    eval_d_metrics = trainer.evaluate()
+    eval_d_metrics["eval_samples"] = len(eval_d_dataset)
+    
+    
+    if training_args.trainer_type == "simpo":
+        trainer = SimPOTrainer(
+            model=model,
+            args=training_args,
+            train_dataset=raw_datasets["test"],
+            eval_dataset=eval_d_dataset,
+            tokenizer=tokenizer,
+            peft_config=get_peft_config(model_args),
+        )
+    else:
+        training_args.ref_model_init_kwargs = model_kwargs
+        trainer = AlphaDPOTrainer(
+                model=model,
+                ref_model=ref_model,
+                args=training_args,
+                train_dataset=raw_datasets["test"],
+                eval_dataset=eval_d_dataset,
+                tokenizer=tokenizer,
+                peft_config=get_peft_config(model_args),
+            )
 
-    if training_args.push_to_hub is True:
-        logger.info("Pushing to hub...")
-        trainer.push_to_hub(**kwargs)
+    ##########
+    # Evaluate
+    ##########
+    logger.info("*** Evaluate DBAR***")
+    eval_dbar_metrics = trainer.evaluate()
+    eval_dbar_metrics["eval_samples"] = len(eval_dbar_dataset)
+    
+    # trainer.log_metrics("eval", metrics)
+    # trainer.save_metrics("eval", metrics)
 
-    logger.info("*** Training complete! ***")
-    return metrics, training_args.output_dir
+    # logger.info("*** Training complete! ***")
+    return eval_d_metrics, eval_dbar_metrics
 
 
 from omegaconf import OmegaConf
@@ -358,29 +321,11 @@ import sys
 if __name__ == "__main__":
     cfg = OmegaConf.from_cli()
     ep = cfg.epoch
-    
-    # if os.path.exists(f"/home/lesong/codes/SimPO/outputs/llama-3-3b-instruct-simpo-v2_{ep}"):
-    #     sys.exit(0)
-    
-    metrics, output_dir = main(ep=ep)
-    # with jsonlines.open("metrics.jsonl", "a") as writter:
-    #         writter.write(metrics)
+    run_name = cfg.exp_name
+    eval_d_metrics, eval_dbar_metrics = main(ep=ep)
+    eval_d_metrics["run_name"] = f"D_{run_name}_{ep}"
+    eval_dbar_metrics["run_name"] = f"DBAR_{run_name}_{ep}"
+    with jsonlines.open("metrics.jsonl", "a") as writter:
+            writter.write(eval_d_metrics)
+            writter.write(eval_dbar_metrics)
     sys.exit(0)
-    # epoch = 10
-    # metrics_list = []
-
-    # train_model = "meta-llama/Llama-3.2-3B-Instruct"
-    # ref_model = "meta-llama/Llama-3.2-3B-Instruct"
-    # # os.system(f"python scripts/decode_data.py --train_model {train_model} --ref_model {ref_model} --epoch 1")
-    # # subprocess.run(['conda', 'run', '-n', 'simpo', 'python', 'scripts/decode_data.py', "--train_model", train_model, "--ref_model", ref_model, "--epoch", "1"], shell=True)
-    # for ep in range(2, epoch+1):
-    #     print(f"EPOCH: {ep}")
-    #     metrics, output_dir = main(ep)
-    #     metrics_list.append(metrics)
-    #     with jsonlines.open("metrics.jsonl", "w") as writter:
-    #         writter.write_all(metrics_list)
-    #     train_model = f"/home/lesong/codes/SimPO/outputs/llama-3-3b-instruct-simpo-v2_{ep}"
-    #     if ep <= epoch:
-    #         subprocess.run(["conda", "deactivate", "&&", 'conda', 'run', '-n', 'simpo', 'python', 'scripts/decode_data.py', "--train_model", train_model, "--ref_model", ref_model, "--epoch", f"{ep+1}"], shell=True)
-    #         subprocess.run(f""""bash -c "$CONDA_PREFIX/etc/profile.d/conda.sh; conda run -n simpo python scripts/decode_data.py --train_model {train_model} --ref_model {ref_model} --epoch {ep+1}""", shell=True)
-    #         # os.system(f"conda activate simpo; python scripts/decode_data.py --train_model {train_model} --ref_model {ref_model} --epoch {ep}")

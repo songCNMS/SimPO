@@ -28,26 +28,33 @@ parser.add_argument('--seed', type=int, default=42,
                     help='seed')
 parser.add_argument('--output_dir', type=str, default="datasets/llama3.1_8B_ultrafeedback",
                     help='output_dir')
-
+parser.add_argument('--algo', type=str, default="alphaDPO",
+                    help='Algo.')
 
 if __name__ == "__main__":
     args = parser.parse_args()
 
     print(args)
+    
+    output_file = f'all_train_data_{args.algo}_{args.epoch}.json'
+    if os.path.exists(os.path.join(args.output_dir, output_file)):
+        sys.exit(0)
+    
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
 
 
     ref_model = args.ref_model
     train_model = args.train_model
 
-    ref_llm = LLM(model=ref_model)
-    ref_tokenizer = ref_llm.get_tokenizer()
+
 
 
     output_data = []
     d_prompts = []
     dbar_prompts = []
 
-    dataset = load_from_disk("./datasets/llama3.1_8B_ultrafeedback/cpo_dataset_1")
+    dataset = load_from_disk(f"./datasets/llama3.1_8B_ultrafeedback/{args.algo}_dataset_1")
     
     
     for item in dataset["train"]:
@@ -61,44 +68,49 @@ if __name__ == "__main__":
     dbar_prompts = sorted(list(set(dbar_prompts)))
 
     prompt_resp_dict = {}
+    
+    # ref_llm = LLM(model=ref_model)
+    # ref_tokenizer = ref_llm.get_tokenizer()
 
-    conversations = [ref_tokenizer.apply_chat_template([{'role': 'user', 'content': prompt}], tokenize=False, add_generation_prompt=True) for prompt in d_prompts]
-    sampling_params = SamplingParams(temperature=args.temperature, 
-                                    top_p=args.top_p, 
-                                    max_tokens=args.max_tokens, 
-                                    seed=args.seed,)
-    outputs = ref_llm.generate(conversations, sampling_params)
+    # conversations = [ref_tokenizer.apply_chat_template([{'role': 'user', 'content': prompt}], tokenize=False, add_generation_prompt=True) for prompt in d_prompts]
+    # sampling_params = SamplingParams(temperature=args.temperature, 
+    #                                 top_p=args.top_p, 
+    #                                 max_tokens=args.max_tokens, 
+    #                                 seed=args.seed,)
+    # outputs = ref_llm.generate(conversations, sampling_params)
 
-    for i, output in enumerate(outputs):
-        prompt_resp_dict[d_prompts[i]] = output.outputs[0].text
+    # for i, output in enumerate(outputs):
+    #     prompt_resp_dict[d_prompts[i]] = output.outputs[0].text
 
+    # del ref_llm
+    # del ref_tokenizer
+    
 
+    # train_llm = LLM(model=train_model)
+    # train_tokenizer = train_llm.get_tokenizer()
 
-    del ref_llm
-    del ref_tokenizer
+    # conversations = [train_tokenizer.apply_chat_template([{'role': 'user', 'content': prompt}], tokenize=False, add_generation_prompt=True) for prompt in dbar_prompts]
+    # sampling_params = SamplingParams(temperature=args.temperature, 
+    #                                 top_p=args.top_p, 
+    #                                 max_tokens=args.max_tokens, 
+    #                                 seed=args.seed,)
+    # outputs = train_llm.generate(conversations, sampling_params)
 
-    train_llm = LLM(model=train_model)
-    train_tokenizer = train_llm.get_tokenizer()
-
-    conversations = [train_tokenizer.apply_chat_template([{'role': 'user', 'content': prompt}], tokenize=False, add_generation_prompt=True) for prompt in dbar_prompts]
-    sampling_params = SamplingParams(temperature=args.temperature, 
-                                    top_p=args.top_p, 
-                                    max_tokens=args.max_tokens, 
-                                    seed=args.seed,)
-    outputs = train_llm.generate(conversations, sampling_params)
-
-    for i, output in enumerate(outputs):
-        prompt_resp_dict[dbar_prompts[i]] = output.outputs[0].text
+    # for i, output in enumerate(outputs):
+    #     prompt_resp_dict[dbar_prompts[i]] = output.outputs[0].text
+    
+    # del train_llm
+    # del train_tokenizer
 
         
     with jsonlines.open("all_train_data.json") as reader:
         for obj in reader:
             if obj["prompt"] in prompt_resp_dict:
                 obj["rejected"][1]["content"] = prompt_resp_dict[obj["prompt"]]
-                output_data.append(obj)
+            output_data.append(obj)
 
 
-    output_file = f'all_train_data_{args.epoch}.json'
+    # output_file = f'all_train_data_{args.epoch}.json'
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
 
@@ -112,7 +124,8 @@ if __name__ == "__main__":
     def map_to_new_resp(item):
         if item["prompt"] in prompt_resp_dict:
             item["rejected"][1]["content"] = prompt_resp_dict[item["prompt"]]
+        return item
 
     dataset["train"] = dataset["train"].map(lambda item: map_to_new_resp(item))
-    dataset.save_to_disk(os.path.join(args.output_dir, f"cpo_dataset_{args.epoch}"))
+    dataset.save_to_disk(os.path.join(args.output_dir, f"{args.algo}_dataset_{args.epoch}"))
     sys.exit(0)
