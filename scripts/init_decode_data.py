@@ -30,6 +30,7 @@ parser.add_argument('--output_dir', type=str, default="datasets/llama3.1_8B_ultr
                     help='output_dir')
 parser.add_argument('--algo', type=str, default="alphaDPO",
                     help='Algo.')
+parser.add_argument('--debug', action='store_true')
 
 
 if __name__ == "__main__":
@@ -64,8 +65,8 @@ if __name__ == "__main__":
                 
     d_prompts = sorted(list(set(d_prompts)))
     dbar_prompts = sorted(list(set(dbar_prompts)))
-    if len(dbar_prompts) > 2*len(d_prompts):
-        dbar_prompts = np.random.choice(dbar_prompts, size=2*len(d_prompts), replace=False)
+    if len(dbar_prompts) > len(d_prompts):
+        dbar_prompts = np.random.choice(dbar_prompts, size=len(d_prompts), replace=False)
 
     prompt_resp_dict = {}
 
@@ -124,6 +125,8 @@ if __name__ == "__main__":
     print(f"Outputs saved to {os.path.join(args.output_dir, output_file)}")
 
     dataset = datasets.Dataset.from_list(output_data)
+    if args.debug:
+        dataset = dataset.shuffle(seed=42).select(range(1000))
     dataset = dataset.train_test_split(test_size=0.2)
     dataset.save_to_disk(os.path.join(args.output_dir, f"{args.algo}_dataset_{args.epoch}"))
     sys.exit(0)

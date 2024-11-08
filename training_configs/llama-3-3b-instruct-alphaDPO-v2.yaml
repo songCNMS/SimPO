@@ -1,7 +1,8 @@
 # Model arguments
 model_name_or_path: meta-llama/Llama-3.2-3B-Instruct
 torch_dtype: null
-attn_implementation: flash_attention_2
+attn_implementation: sdpa
+# attn_implementation: flash_attention_2
 
 # Data training arguments
 dataset_mixer:
@@ -12,8 +13,8 @@ dataset_splits:
 preprocessing_num_workers: 12
 
 # AlphaDPOTrainer arguments
-bf16: true
-beta: 10
+fp16: true
+beta: 1.0
 gamma_beta_ratio: 0.4
 alpha: 0.2
 ln: true

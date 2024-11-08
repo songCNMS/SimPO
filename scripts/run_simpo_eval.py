@@ -218,10 +218,10 @@ def main(ep=1):
     eval_d_list = []
     eval_dbar_list = []
     for item in raw_datasets["test"]:
-        # if item["type"] == "D":
-        eval_d_list.append(item)
-        # else:
-        eval_dbar_list.append(item)
+        if item["type"] == "D":
+            eval_d_list.append(item)
+        else:
+            eval_dbar_list.append(item)
             
     eval_d_dataset = datasets.Dataset.from_list(eval_d_list)
     eval_dbar_dataset = datasets.Dataset.from_list(eval_dbar_list)
@@ -262,12 +262,15 @@ def main(ep=1):
         training_args.ref_model_init_kwargs = model_kwargs
         trainer = AlphaDPOTrainer(
                 model=model,
-                ref_model=model,
+                ref_model=ref_model,
                 args=training_args,
                 train_dataset=raw_datasets["test"],
                 eval_dataset=eval_d_dataset,
                 tokenizer=tokenizer,
                 peft_config=get_peft_config(model_args),
+                max_length=training_args.max_length,
+                max_prompt_length=training_args.max_prompt_length,
+                loss_type=training_args.loss_type,
             )
     
 
@@ -298,6 +301,9 @@ def main(ep=1):
                 eval_dataset=eval_d_dataset,
                 tokenizer=tokenizer,
                 peft_config=get_peft_config(model_args),
+                max_length=training_args.max_length,
+                max_prompt_length=training_args.max_prompt_length,
+                loss_type=training_args.loss_type,
             )
 
     ##########

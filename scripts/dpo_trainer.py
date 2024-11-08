@@ -89,24 +89,33 @@ class AlphaDPOTrainer(DPOTrainer):
             ref_logratios = reference_chosen_logps - reference_rejected_logps
             gap_pos_neg = pi_logratios - ref_logratios
             self.update_and_sync_ref_mean_std(gap_pos_neg)
+            
             ref_logratios_normalized = (gap_pos_neg - self.constant_1) / self.constant_2
+            
+            # print("ref_logratios_normalized, gap_pos_neg, self.constant_1, self.constant_2")
+            # print(ref_logratios_normalized, gap_pos_neg, self.constant_1, self.constant_2)
             # ref_logratios_scaled = ref_logratios_normalized * self.alpha + self.gamma_beta_ratio
             ref_logratios_scaled = torch.mul(ref_logratios_normalized, alphas) + self.gamma_beta_ratio
             constant_term = ref_logratios_scaled.detach()
             logits = pi_logratios - constant_term
+            # print("logits, pi_logratios, constant_term")
+            # print(logits, pi_logratios, constant_term)
             losses = (
                 -F.logsigmoid(self.beta * logits) * (1 - self.label_smoothing)
                 - F.logsigmoid(-self.beta * logits) * self.label_smoothing
             )
+            # print(self.beta, logits, self.label_smoothing)
             chosen_rewards = (
                 self.beta
-                * ( policy_chosen_logps - self.alpha * (policy_chosen_logps - reference_chosen_logps)).detach()
+                * ( policy_chosen_logps - alphas * (policy_chosen_logps - reference_chosen_logps)).detach()
             )
             rejected_rewards = (
                 self.beta
                 * (
-                    policy_rejected_logps - self.alpha * (policy_rejected_logps - reference_rejected_logps)).detach()
+                    policy_rejected_logps - alphas * (policy_rejected_logps - reference_rejected_logps)).detach()
             )
+            # print("self.beta, logits, self.label_smoothing, chosen_rewards, rejected_rewards")
+            # print(self.beta, logits, self.label_smoothing, chosen_rewards, rejected_rewards)
             return (losses, 1.0, constant_term), chosen_rewards, rejected_rewards, None
         elif self.loss_type == "simpo":
             logits = policy_chosen_logps - policy_rejected_logps
@@ -144,7 +153,7 @@ class AlphaDPOTrainer(DPOTrainer):
             ref_logratios_local = ref_logratios.clone()
             ref_logratios_global = self.accelerator.gather(ref_logratios_local)
             ref_logratios_global_mean = torch.mean(ref_logratios_global)
-            ref_logratios_global_std = torch.std(ref_logratios_global)
+            ref_logratios_global_std = torch.clamp(torch.nan_to_num(torch.std(ref_logratios_global)), min=0.01, max=10000.0)
             # gamma_cnt_1 = torch.var(reward_global_1)
             self.constant_1 = self.constant_1 * gamma_update + ref_logratios_global_mean * (1 - gamma_update)
             self.constant_2 = self.constant_2 * gamma_update + ref_logratios_global_std * (1 - gamma_update)
@@ -186,7 +195,9 @@ class AlphaDPOTrainer(DPOTrainer):
                         _,
                         _,
                     ) = self.concatenated_forward(self.ref_model, batch)
-                    
+        
+        # print("policy_chosen_logps, policy_rejected_logps, reference_chosen_logps, reference_rejected_logps")  
+        # print(policy_chosen_logps, policy_rejected_logps, reference_chosen_logps, reference_rejected_logps)
         alphas = torch.Tensor(batch["alpha"]).to(torch.float16).to(device=self.accelerator.device)
         losses, chosen_rewards, rejected_rewards, constant_term = self.dpo_loss(
             policy_chosen_logps,
@@ -197,6 +208,8 @@ class AlphaDPOTrainer(DPOTrainer):
             len_rejected=batch["rejected_labels"].shape[0],
             alphas=alphas,
         )
+        print("losses, chosen_rewards, rejected_rewards")
+        print(losses, chosen_rewards, rejected_rewards)
         prefix = "eval_" if train_eval == "eval" else ""
         
         reward_accuracies = (chosen_rewards > rejected_rewards).float()
@@ -246,20 +259,26 @@ class AlphaDPOTrainer(DPOTrainer):
             else {}
         )
 
+        # print(concatenated_batch)
+        
         all_logits = model(
             concatenated_batch["concatenated_input_ids"],
             attention_mask=concatenated_batch["concatenated_attention_mask"],
             use_cache=False,
             **model_kwargs,
         ).logits
+        
 
-        all_logps, _ = self.get_batch_logps(
+        all_logps, logps_len = self.get_batch_logps(
             all_logits,
             concatenated_batch["concatenated_labels"],
             # average_log_prob=self.ln,
             is_encoder_decoder=self.is_encoder_decoder,
             label_pad_token_id=self.label_pad_token_id,
         )
+        
+        all_logps /= logps_len
+        print("all_logps: ", all_logps)
 
         chosen_logps = all_logps[:len_chosen]
         rejected_logps = all_logps[len_chosen:]
