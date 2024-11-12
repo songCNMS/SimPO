@@ -18,7 +18,7 @@ beta: 1.0
 gamma_beta_ratio: 0.4
 alpha: 0.2
 ln: true
-trainer_type: alphaDPO
+trainer_type: SFTReg
 loss_type: sft-reg
 do_eval: true
 evaluation_strategy: steps
