@@ -1,8 +1,8 @@
 
 
-for algo in alphaDPO alphaDPO-DA
+for algo in simpo alphaDPO alphaDPO-DA
 do
-    conda run -n simpo python scripts/init_decode_data.py --train_model meta-llama/Llama-3.2-3B-Instruct --ref_model meta-llama/Llama-3.2-3B-Instruct --epoch 1 --algo $algo --debug;
+    conda run -n simpo python scripts/init_decode_data.py --train_model meta-llama/Llama-3.2-3B-Instruct --ref_model meta-llama/Llama-3.2-3B-Instruct --epoch 1 --algo $algo;
 
     for i in {1..4}; do \
         conda run -n simpoenv python scripts/run_simpo.py training_configs/llama-3-3b-instruct-$algo-v2.yaml epoch=$i;\

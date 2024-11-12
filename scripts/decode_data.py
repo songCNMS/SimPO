@@ -48,7 +48,7 @@ if __name__ == "__main__":
     train_model = args.train_model
 
 
-
+    data_dir_loc = os.path.join(os.getenv('AMLT_DATA_DIR', "./data/"))
 
     output_data = []
     d_prompts = []
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     # del train_tokenizer
 
         
-    with jsonlines.open("all_train_data.json") as reader:
+    with jsonlines.open(f"{data_dir_loc}/all_train_data.json") as reader:
         for obj in reader:
             if obj["prompt"] in prompt_resp_dict:
                 obj["rejected"][1]["content"] = prompt_resp_dict[obj["prompt"]]

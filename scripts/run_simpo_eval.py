@@ -287,7 +287,7 @@ def main(ep=1):
             model=model,
             args=training_args,
             train_dataset=raw_datasets["test"],
-            eval_dataset=eval_d_dataset,
+            eval_dataset=eval_dbar_dataset,
             tokenizer=tokenizer,
             peft_config=get_peft_config(model_args),
         )
@@ -298,7 +298,7 @@ def main(ep=1):
                 ref_model=ref_model,
                 args=training_args,
                 train_dataset=raw_datasets["test"],
-                eval_dataset=eval_d_dataset,
+                eval_dataset=eval_dbar_dataset,
                 tokenizer=tokenizer,
                 peft_config=get_peft_config(model_args),
                 max_length=training_args.max_length,
@@ -331,6 +331,9 @@ if __name__ == "__main__":
     eval_d_metrics, eval_dbar_metrics = main(ep=ep)
     eval_d_metrics["run_name"] = f"D_{run_name}_{ep}"
     eval_dbar_metrics["run_name"] = f"DBAR_{run_name}_{ep}"
+    
+    output_dir_loc = os.path.join(os.getenv('AMLT_OUTPUT_DIR', "./"))
+    
     with jsonlines.open("metrics.jsonl", "a") as writter:
             writter.write(eval_d_metrics)
             writter.write(eval_dbar_metrics)
