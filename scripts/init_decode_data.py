@@ -79,6 +79,8 @@ if __name__ == "__main__":
             dbar_prompts, size=len(d_prompts), replace=False
         )
 
+    all_prompts = list(d_prompts) + list(dbar_prompts)
+    
     prompt_resp_dict = {}
 
     ref_llm = LLM(model=ref_model)
@@ -89,7 +91,7 @@ if __name__ == "__main__":
             tokenize=False,
             add_generation_prompt=True,
         )
-        for prompt in dbar_prompts + d_prompts
+        for prompt in all_prompts
     ]
     sampling_params = SamplingParams(
         temperature=args.temperature,
@@ -100,7 +102,10 @@ if __name__ == "__main__":
     outputs = ref_llm.generate(conversations, sampling_params)
 
     for i, output in enumerate(outputs):
-        prompt_resp_dict[d_prompts[i]] = output.outputs[0].text
+        if i < len(d_prompts):
+            prompt_resp_dict[d_prompts[i]] = output.outputs[0].text
+        else:
+            prompt_resp_dict[dbar_prompts[i-len(dbar_prompts)]] = output.outputs[0].text
 
     del ref_llm
     del ref_tokenizer
