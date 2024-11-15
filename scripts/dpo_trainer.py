@@ -142,13 +142,13 @@ class AlphaDPOTrainer(DPOTrainer):
             # print(self.beta, logits, self.label_smoothing, chosen_rewards, rejected_rewards)
             return (losses, 1.0, constant_term), chosen_rewards, rejected_rewards, None
         elif self.loss_type == "sft-reg":
-            pi_logratios = policy_chosen_logps - policy_rejected_logps
-            ref_logratios = reference_chosen_logps - reference_rejected_logps
+            # pi_logratios = policy_chosen_logps - policy_rejected_logps
+            # ref_logratios = reference_chosen_logps - reference_rejected_logps
 
             pos_logratios = policy_chosen_logps - reference_chosen_logps - 0.2
             neg_logratios = policy_rejected_logps - reference_rejected_logps - 0.01
 
-            losses = -F.logsigmoid(pos_logratios) - 0.5 * F.logsigmoid(neg_logratios)
+            losses = -F.logsigmoid(pos_logratios) + 0.5*F.logsigmoid(neg_logratios)
             # print(self.beta, logits, self.label_smoothing)
             chosen_rewards = (
                 self.beta

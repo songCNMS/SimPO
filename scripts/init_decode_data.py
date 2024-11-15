@@ -33,6 +33,8 @@ parser.add_argument(
 parser.add_argument(
     "--max_tokens", type=int, default=4096, help="Maximum number of tokens to generate"
 )
+
+parser.add_argument("--num_samples", type=int, default=1000, help="num_samples")
 parser.add_argument("--epoch", type=int, default=42, help="epoch")
 parser.add_argument("--seed", type=int, default=42, help="seed")
 parser.add_argument(
@@ -105,7 +107,7 @@ if __name__ == "__main__":
         if i < len(d_prompts):
             prompt_resp_dict[d_prompts[i]] = output.outputs[0].text
         else:
-            prompt_resp_dict[dbar_prompts[i-len(dbar_prompts)]] = output.outputs[0].text
+            prompt_resp_dict[dbar_prompts[i-len(d_prompts)]] = output.outputs[0].text
 
     del ref_llm
     del ref_tokenizer
@@ -147,8 +149,8 @@ if __name__ == "__main__":
     print(f"Outputs saved to {os.path.join(args.output_dir, output_file)}")
 
     dataset = datasets.Dataset.from_list(output_data)
-    if args.debug:
-        dataset = dataset.shuffle(seed=42).select(range(1000))
+    if args.debug and args.num_samples < len(dataset):
+        dataset = dataset.shuffle(seed=42).select(range(args.num_samples))
     dataset = dataset.train_test_split(test_size=0.2)
     dataset.save_to_disk(
         os.path.join(args.output_dir, f"{args.algo}_dataset_{args.epoch}")
