@@ -137,6 +137,9 @@ if __name__ == "__main__":
             #     obj["alpha"] = 0.2
             if obj["prompt"] in prompt_resp_dict:
                 obj["rejected"][1]["content"] = prompt_resp_dict[obj["prompt"]]
+                if obj["type"] == "DBAR":
+                    obj["chosen"][1]["content"] = prompt_resp_dict[obj["prompt"]]
+                    
             obj["alpha"] = 0.2
             output_data.append(obj)
 
