@@ -145,10 +145,12 @@ class AlphaDPOTrainer(DPOTrainer):
             # pi_logratios = policy_chosen_logps - policy_rejected_logps
             # ref_logratios = reference_chosen_logps - reference_rejected_logps
 
-            pos_logratios = policy_chosen_logps - reference_chosen_logps - 0.2
-            neg_logratios = policy_rejected_logps - reference_rejected_logps
-            
-            losses = - policy_chosen_logps + neg_logratios**2
+            # pos_logratios = policy_chosen_logps - reference_chosen_logps
+            logits = policy_chosen_logps - policy_rejected_logps
+            logits = logits - self.gamma_beta_ratio
+            # neg_logratios = policy_rejected_logps - reference_rejected_logps
+            neg_logratios = policy_chosen_logps - reference_chosen_logps
+            losses = - (1.0-alphas)*logits + alphas*(neg_logratios**2)
 
             # losses = -F.logsigmoid(pos_logratios) - 0.1*F.logsigmoid(neg_logratios)
             # print(self.beta, logits, self.label_smoothing)
