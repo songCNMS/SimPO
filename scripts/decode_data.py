@@ -124,6 +124,8 @@ if __name__ == "__main__":
     def map_to_new_resp(item):
         if item["prompt"] in prompt_resp_dict:
             item["rejected"][1]["content"] = prompt_resp_dict[item["prompt"]]
+        if args.algo.startswith("alphaDPO"):
+            item["alpha"] = 1.0
         return item
 
     dataset["train"] = dataset["train"].map(lambda item: map_to_new_resp(item))
