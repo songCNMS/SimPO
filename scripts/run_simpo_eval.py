@@ -322,19 +322,46 @@ def main(ep=1):
 
 from omegaconf import OmegaConf
 import sys
+from datetime import datetime
+import pandas as pd
 
 
 if __name__ == "__main__":
     cfg = OmegaConf.from_cli()
     ep = cfg.epoch
-    run_name = cfg.exp_name
+    exp_name = cfg.exp_name
     eval_d_metrics, eval_dbar_metrics = main(ep=ep)
-    eval_d_metrics["run_name"] = f"D_{run_name}_{ep}"
-    eval_dbar_metrics["run_name"] = f"DBAR_{run_name}_{ep}"
+    eval_d_metrics["exp_name"] = f"D_{exp_name}_{ep}"
+    eval_dbar_metrics["exp_name"] = f"DBAR_{exp_name}_{ep}"
+    run_name = cfg.get("run_name", datetime.today().strftime("%Y%m%d%H%M%S"))
     
-    output_dir_loc = os.path.join(os.getenv('AMLT_OUTPUT_DIR', "./"))
-    
-    with jsonlines.open("metrics.jsonl", "a") as writter:
+    output_dir_loc = os.path.join(os.getenv('AMLT_OUTPUT_DIR', f"./logs/{run_name}/"))
+    os.makedirs(output_dir_loc, exist_ok=True)
+    with jsonlines.open(f"{output_dir_loc}/metrics.jsonl", "a") as writter:
             writter.write(eval_d_metrics)
             writter.write(eval_dbar_metrics)
+            
+            
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.FileHandler(f"{output_dir_loc}/running.log"),
+            logging.StreamHandler(sys.stdout),
+        ],
+    )
+    
+    if os.path.exists(f"{output_dir_loc}/metrics.csv"):
+        df_ex = pd.read_csv(f"{output_dir_loc}/metrics.csv")
+        metrics_monitor = df_ex.columns.tolist()
+    else:
+        df_ex = None
+        metrics_monitor = ["exp_name"] + [x for x in eval_d_metrics.keys() if x.startswith("eval_rewards")]
+    
+    data = [[eval_d_metrics.get(x, None) for x in metrics_monitor], [eval_dbar_metrics.get(x, None) for x in metrics_monitor]]
+    df = pd.DataFrame(data=data, columns=metrics_monitor)
+    if df_ex is not None:
+        df = pd.concat([df_ex, df], axis=0)
+    
+    df.to_csv(f"{output_dir_loc}/metrics.csv", index=False)
     sys.exit(0)
