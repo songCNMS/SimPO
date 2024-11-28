@@ -9,6 +9,8 @@ import jsonlines
 import numpy as np
 import datasets
 import sys
+from collections import defaultdict
+import random
 
 
 parser = argparse.ArgumentParser(description="Decode with vllm")
@@ -83,7 +85,7 @@ if __name__ == "__main__":
 
     all_prompts = list(d_prompts) + list(dbar_prompts)
     
-    prompt_resp_dict = {}
+    prompt_resp_dict = defaultdict(list)
 
     ref_llm = LLM(model=ref_model)
     ref_tokenizer = ref_llm.get_tokenizer()
@@ -101,13 +103,17 @@ if __name__ == "__main__":
         max_tokens=args.max_tokens,
         seed=args.seed,
     )
-    outputs = ref_llm.generate(conversations, sampling_params)
+    
+    
+    for _ in range(10):
+        
+        outputs = ref_llm.generate(conversations, sampling_params)
 
-    for i, output in enumerate(outputs):
-        if i < len(d_prompts):
-            prompt_resp_dict[d_prompts[i]] = output.outputs[0].text
-        else:
-            prompt_resp_dict[dbar_prompts[i-len(d_prompts)]] = output.outputs[0].text
+        for i, output in enumerate(outputs):
+            if i < len(d_prompts):
+                prompt_resp_dict[d_prompts[i]].append(output.outputs[0].text)
+            else:
+                prompt_resp_dict[dbar_prompts[i-len(d_prompts)]].append(output.outputs[0].text)
 
     del ref_llm
     del ref_tokenizer
@@ -136,9 +142,9 @@ if __name__ == "__main__":
             #         obj["chosen"][1]["content"] = prompt_resp_dict[obj["prompt"]]
             #     obj["alpha"] = 0.2
             if obj["prompt"] in prompt_resp_dict:
-                obj["rejected"][1]["content"] = prompt_resp_dict[obj["prompt"]]
+                obj["rejected"][1]["content"] = random.choice(prompt_resp_dict[obj["prompt"]])
                 if obj["type"] == "DBAR":
-                    obj["chosen"][1]["content"] = prompt_resp_dict[obj["prompt"]]
+                    obj["chosen"][1]["content"] = random.choice(prompt_resp_dict[obj["prompt"]])
             if obj["type"] == "DBAR":
                 obj["alpha"] = 1.0
             else:
