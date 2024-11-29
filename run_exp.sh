@@ -4,9 +4,9 @@
 sh -c "rm -rf 'datasets/*'"
 sh -c "rm -rf 'ouptuts/*'"
 
-conda run -n simpo_data python scripts/init_decode_data.py --train_model meta-llama/Llama-3.2-3B-Instruct --ref_model meta-llama/Llama-3.2-3B-Instruct --epoch 1 --algo cpo --num_samples 100 --debug --output_dir datasets/llama3_3b_ultrafeedback --ori_rej;
+conda run -n simpo_data python scripts/init_decode_data.py --train_model meta-llama/Llama-3.2-3B-Instruct --ref_model meta-llama/Llama-3.2-3B-Instruct --epoch 1 --algo cpo --num_samples 10000 --debug --output_dir datasets/llama3_3b_ultrafeedback --ori_rej;
 
-for i in {1..2}
+for i in {1..4}
 do
     for algo in DPO simpo alphaDPO
     do
@@ -17,9 +17,9 @@ do
 done
 
 
-conda run -n simpo_data python scripts/init_decode_data.py --train_model Qwen/Qwen2.5-3B-Instruct --ref_model Qwen/Qwen2.5-3B-Instruct --epoch 1 --algo cpo --num_samples 100 --debug --output_dir datasets/qwen25_3b_ultrafeedback --ori_rej;
+conda run -n simpo_data python scripts/init_decode_data.py --train_model Qwen/Qwen2.5-3B-Instruct --ref_model Qwen/Qwen2.5-3B-Instruct --epoch 1 --algo cpo --num_samples 10000 --debug --output_dir datasets/qwen25_3b_ultrafeedback --ori_rej;
 
-for i in {1..2}
+for i in {1..4}
 do
     for algo in DPO simpo alphaDPO
     do
@@ -35,9 +35,9 @@ sh -c "rm -rf 'datasets/*'"
 sh -c "rm -rf 'ouptuts/*'"
 
 
-conda run -n simpo_data python scripts/init_decode_data.py --train_model meta-llama/Llama-3.2-3B-Instruct --ref_model meta-llama/Llama-3.2-3B-Instruct --epoch 1 --algo cpo --num_samples 100 --debug --output_dir datasets/llama3_3b_ultrafeedback;
+conda run -n simpo_data python scripts/init_decode_data.py --train_model meta-llama/Llama-3.2-3B-Instruct --ref_model meta-llama/Llama-3.2-3B-Instruct --epoch 1 --algo cpo --num_samples 10000 --debug --output_dir datasets/llama3_3b_ultrafeedback;
 
-for i in {1..2}
+for i in {1..4}
 do
     for algo in DPO simpo alphaDPO
     do
@@ -48,9 +48,9 @@ do
 done
 
 
-conda run -n simpo_data python scripts/init_decode_data.py --train_model Qwen/Qwen2.5-3B-Instruct --ref_model Qwen/Qwen2.5-3B-Instruct --epoch 1 --algo cpo --num_samples 100 --debug --output_dir datasets/qwen25_3b_ultrafeedback;
+conda run -n simpo_data python scripts/init_decode_data.py --train_model Qwen/Qwen2.5-3B-Instruct --ref_model Qwen/Qwen2.5-3B-Instruct --epoch 1 --algo cpo --num_samples 10000 --debug --output_dir datasets/qwen25_3b_ultrafeedback;
 
-for i in {1..2}
+for i in {1..4}
 do
     for algo in DPO simpo alphaDPO
     do
