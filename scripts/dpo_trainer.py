@@ -424,7 +424,7 @@ class AlphaDPOTrainer(DPOTrainer):
             if not isinstance(rejected, str):
                 raise ValueError(f"rejected should be an str but got {type(rejected)}")
             rejected_tokens = self.build_tokenized_answer(prompt, rejected)
-
+            
             # Last prompt token might get merged by tokenizer and
             # it should not be included for generation if that happens
             prompt_len_input_ids = len(prompt_tokens["prompt_input_ids"])

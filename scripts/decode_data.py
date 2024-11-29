@@ -54,7 +54,7 @@ if __name__ == "__main__":
     d_prompts = []
     dbar_prompts = []
 
-    dataset = load_from_disk(f"./datasets/llama3.1_8B_ultrafeedback/cpo_dataset_1")
+    dataset = load_from_disk(f"{args.output_dir}/cpo_dataset_1")
     
     
     for item in dataset["train"]:

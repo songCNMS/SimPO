@@ -108,8 +108,8 @@ def apply_chat_template(
             if auto_insert_empty_system_msg:
                 maybe_insert_system_message(prompt_messages, tokenizer)
 
-            example["text_prompt"] = tokenizer.apply_chat_template(prompt_messages, tokenize=False)
-            example["text_chosen"] = tokenizer.apply_chat_template(chosen_messages, tokenize=False)
+            example["text_prompt"] = tokenizer.apply_chat_template(prompt_messages, tokenize=False, add_generation_prompt=True)
+            example["text_chosen"] = tokenizer.apply_chat_template(chosen_messages, tokenize=False, add_generation_prompt=True)
             if tokenizer.bos_token and example["text_chosen"].startswith(tokenizer.bos_token):
                 example["text_chosen"] = example["text_chosen"][len(tokenizer.bos_token):]
             example["text_rejected"] = tokenizer.apply_chat_template(rejected_messages, tokenize=False)
@@ -132,7 +132,8 @@ def main(ep=1):
     model_args, data_args, training_args = parser.parse()
     output_dir = training_args.output_dir
     training_args.output_dir = training_args.output_dir + f"/{training_args.trainer_type}_{ep}"
-    data_args.dataset_mixer = {f"/home/lesong/codes/SimPO/datasets/llama3.1_8B_ultrafeedback/{training_args.trainer_type}_dataset_{ep}": 1.0}
+    data_dir = list(data_args.dataset_mixer.keys())[0]
+    data_args.dataset_mixer = {f"{data_dir}/{training_args.trainer_type}_dataset_{ep}": 1.0}
     ref_model = model_args.model_name_or_path
     if ep > 1:
         model_args.model_name_or_path = output_dir + f"/{training_args.trainer_type}_{ep-1}"
@@ -190,6 +191,12 @@ def main(ep=1):
     #####################################
     data_args.truncation_side = "left"  # Truncate from left to ensure we don't lose labels in final turn
     tokenizer = get_tokenizer(model_args, data_args)
+    
+    
+    if ref_model.lower().find("qwen") >= 0:
+        if tokenizer.eos_token is not None:
+            tokenizer.add_special_tokens({"bos_token": tokenizer.eos_token})
+            tokenizer.bos_token_id = tokenizer.eos_token_id
 
     if "mistral" in model_args.model_name_or_path.lower():
         change_template = "mistral"

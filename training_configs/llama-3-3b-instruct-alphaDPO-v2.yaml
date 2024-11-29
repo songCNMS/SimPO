@@ -6,7 +6,7 @@ attn_implementation: sdpa
 
 # Data training arguments
 dataset_mixer:
-  /home/lesong/codes/SimPO/datasets/llama3.1_8B_ultrafeedback/cpo_dataset_1: 1.0
+  /home/lesong/codes/SimPO/datasets/llama3_3b_ultrafeedback/: 1.0
 dataset_splits:
 - train
 - test

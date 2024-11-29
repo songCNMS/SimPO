@@ -133,7 +133,8 @@ def main(ep=1):
     model_args, data_args, training_args = parser.parse()
     
     # training_args.output_dir = training_args.output_dir + f"_{ep}"
-    data_args.dataset_mixer = {f"/home/lesong/codes/SimPO/datasets/llama3.1_8B_ultrafeedback/{training_args.trainer_type}_dataset_{ep}": 1.0}
+    data_dir = list(data_args.dataset_mixer.keys())[0]
+    data_args.dataset_mixer = {f"{data_dir}/{training_args.trainer_type}_dataset_{ep}": 1.0}
     ref_model = model_args.model_name_or_path
     model_args.model_name_or_path = training_args.output_dir + f"/{training_args.trainer_type}_{ep}"
     #######
@@ -186,6 +187,12 @@ def main(ep=1):
     #####################################
     data_args.truncation_side = "left"  # Truncate from left to ensure we don't lose labels in final turn
     tokenizer = get_tokenizer(model_args, data_args)
+    
+    if ref_model.lower().find("qwen") >= 0:
+        if tokenizer.eos_token is not None:
+            tokenizer.add_special_tokens({"bos_token": tokenizer.eos_token})
+            tokenizer.bos_token_id = tokenizer.eos_token_id
+
 
     if "mistral" in model_args.model_name_or_path.lower():
         change_template = "mistral"
@@ -356,7 +363,7 @@ if __name__ == "__main__":
         metrics_monitor = df_ex.columns.tolist()
     else:
         df_ex = None
-        metrics_monitor = ["exp_name"] + [x for x in eval_d_metrics.keys() if x.startswith("eval_rewards")]
+        metrics_monitor = ["exp_name"] + [x for x in eval_d_metrics.keys() if x.startswith("eval_rewards") or x.startswith("eval_logps")]
     
     data = [[eval_d_metrics.get(x, None) for x in metrics_monitor], [eval_dbar_metrics.get(x, None) for x in metrics_monitor]]
     df = pd.DataFrame(data=data, columns=metrics_monitor)

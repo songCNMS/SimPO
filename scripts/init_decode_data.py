@@ -47,6 +47,7 @@ parser.add_argument(
 )
 parser.add_argument("--algo", type=str, default="alphaDPO", help="Algo.")
 parser.add_argument("--debug", action="store_true")
+parser.add_argument("--ori_rej", action="store_true")
 
 
 if __name__ == "__main__":
@@ -85,6 +86,9 @@ if __name__ == "__main__":
 
     all_prompts = list(d_prompts) + list(dbar_prompts)
     
+    if args.debug and args.num_samples < len(all_prompts):
+        all_prompts = np.random.choice(all_prompts, size=args.num_samples, replace=False)
+    
     prompt_resp_dict = defaultdict(list)
 
     ref_llm = LLM(model=ref_model)
@@ -110,10 +114,11 @@ if __name__ == "__main__":
         outputs = ref_llm.generate(conversations, sampling_params)
 
         for i, output in enumerate(outputs):
-            if i < len(d_prompts):
-                prompt_resp_dict[d_prompts[i]].append(output.outputs[0].text)
-            else:
-                prompt_resp_dict[dbar_prompts[i-len(d_prompts)]].append(output.outputs[0].text)
+            prompt_resp_dict[all_prompts[i]].append(output.outputs[0].text)
+            # if i < len(d_prompts):
+            #     prompt_resp_dict[d_prompts[i]].append(output.outputs[0].text)
+            # else:
+            #     prompt_resp_dict[dbar_prompts[i-len(d_prompts)]].append(output.outputs[0].text)
 
     del ref_llm
     del ref_tokenizer
@@ -131,6 +136,7 @@ if __name__ == "__main__":
     # for i, output in enumerate(outputs):
     #     prompt_resp_dict[dbar_prompts[i]] = output.outputs[0].text
 
+    prompt_set = set()
     with jsonlines.open(f"{data_dir_loc}/all_train_data.json") as reader:
         for obj in reader:
             # if obj["type"] == "D":
@@ -141,15 +147,19 @@ if __name__ == "__main__":
             #     if obj["prompt"] in prompt_resp_dict:
             #         obj["chosen"][1]["content"] = prompt_resp_dict[obj["prompt"]]
             #     obj["alpha"] = 0.2
+            if obj["prompt"] in prompt_set: continue
             if obj["prompt"] in prompt_resp_dict:
-                obj["rejected"][1]["content"] = random.choice(prompt_resp_dict[obj["prompt"]])
+                if not args.ori_rej:
+                    obj["rejected"][1]["content"] = random.choice(prompt_resp_dict[obj["prompt"]])
                 if obj["type"] == "DBAR":
+                    obj["rejected"][1]["content"] = random.choice(prompt_resp_dict[obj["prompt"]])
                     obj["chosen"][1]["content"] = random.choice(prompt_resp_dict[obj["prompt"]])
-            if obj["type"] == "DBAR":
-                obj["alpha"] = 1.0
-            else:
-                obj["alpha"] = 0.0
-            output_data.append(obj)
+                if obj["type"] == "DBAR":
+                    obj["alpha"] = 1.0
+                else:
+                    obj["alpha"] = 0.0
+                output_data.append(obj)
+                prompt_set.add(obj["prompt"])
 
     # with open(os.path.join(args.output_dir, output_file), 'w') as f:
     #     json.dump(output_data, f, indent=4)
@@ -160,8 +170,8 @@ if __name__ == "__main__":
     print(f"Outputs saved to {os.path.join(args.output_dir, output_file)}")
 
     dataset = datasets.Dataset.from_list(output_data)
-    if args.debug and args.num_samples < len(dataset):
-        dataset = dataset.shuffle(seed=42).select(range(args.num_samples))
+    # if args.debug and args.num_samples < len(dataset):
+    #     dataset = dataset.shuffle(seed=42).select(range(args.num_samples))
     dataset = dataset.train_test_split(test_size=0.2)
     dataset.save_to_disk(
         os.path.join(args.output_dir, f"{args.algo}_dataset_{args.epoch}")
