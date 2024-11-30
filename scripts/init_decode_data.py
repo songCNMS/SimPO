@@ -147,7 +147,7 @@ if __name__ == "__main__":
             #     if obj["prompt"] in prompt_resp_dict:
             #         obj["chosen"][1]["content"] = prompt_resp_dict[obj["prompt"]]
             #     obj["alpha"] = 0.2
-            if obj["prompt"] in prompt_set: continue
+            # if obj["prompt"] in prompt_set: continue
             if obj["prompt"] in prompt_resp_dict:
                 if not args.ori_rej:
                     obj["rejected"][1]["content"] = random.choice(prompt_resp_dict[obj["prompt"]])

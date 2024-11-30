@@ -256,29 +256,29 @@ def main(ep=1):
     #########################
     # Instantiate SimPO trainer
     #########################
-    if training_args.trainer_type == "simpo":
-        trainer = SimPOTrainer(
-            model=model,
-            args=training_args,
-            train_dataset=raw_datasets["test"],
-            eval_dataset=eval_d_dataset,
-            tokenizer=tokenizer,
-            peft_config=get_peft_config(model_args),
-        )
-    else:
-        training_args.ref_model_init_kwargs = model_kwargs
-        trainer = AlphaDPOTrainer(
-                model=model,
-                ref_model=ref_model,
-                args=training_args,
-                train_dataset=raw_datasets["test"],
-                eval_dataset=eval_d_dataset,
-                tokenizer=tokenizer,
-                peft_config=get_peft_config(model_args),
-                max_length=training_args.max_length,
-                max_prompt_length=training_args.max_prompt_length,
-                loss_type=training_args.loss_type,
-            )
+    # if training_args.trainer_type == "simpo":
+    trainer = SimPOTrainer(
+        model=model,
+        args=training_args,
+        train_dataset=raw_datasets["test"],
+        eval_dataset=eval_d_dataset,
+        tokenizer=tokenizer,
+        peft_config=get_peft_config(model_args),
+    )
+    # else:
+    #     training_args.ref_model_init_kwargs = model_kwargs
+    #     trainer = AlphaDPOTrainer(
+    #             model=model,
+    #             ref_model=ref_model,
+    #             args=training_args,
+    #             train_dataset=raw_datasets["test"],
+    #             eval_dataset=eval_d_dataset,
+    #             tokenizer=tokenizer,
+    #             peft_config=get_peft_config(model_args),
+    #             max_length=training_args.max_length,
+    #             max_prompt_length=training_args.max_prompt_length,
+    #             loss_type=training_args.loss_type,
+    #         )
     
 
     ##########

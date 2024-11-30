@@ -31,7 +31,7 @@ logging_steps: 100
 lr_scheduler_type: cosine
 max_length: 3072
 max_prompt_length: 2800
-num_train_epochs: 1
+num_train_epochs: 3
 optim: adamw_torch
 output_dir: outputs/qwen25-3b-instruct-simpo-v2
 run_name: qwen25-3b-instruct-simpo-v2

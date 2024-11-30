@@ -151,7 +151,7 @@ class AlphaDPOTrainer(DPOTrainer):
             # logits = logits - self.gamma_beta_ratio
             neg_logratios = torch.abs(policy_rejected_logps - reference_rejected_logps)
             pos_logratios = torch.abs(policy_chosen_logps - reference_chosen_logps)
-            logits =  policy_chosen_logps / torch.clamp(reference_chosen_logps, max=-1.0)
+            logits =  policy_chosen_logps / torch.clamp(reference_chosen_logps, max=-0.01)
             losses = (1.0-alphas)*logits + 10.0*alphas*(neg_logratios + pos_logratios)
 
             # losses = -F.logsigmoid(pos_logratios) - 0.1*F.logsigmoid(neg_logratios)
