@@ -113,7 +113,7 @@ class AlphaDPOTrainer(DPOTrainer):
             # print(ref_logratios_normalized, gap_pos_neg, self.constant_1, self.constant_2)
             # ref_logratios_scaled = ref_logratios_normalized * self.alpha + self.gamma_beta_ratio
             ref_logratios_scaled = (
-                torch.mul(ref_logratios_normalized, alphas) + self.gamma_beta_ratio
+                self.alpha*ref_logratios_normalized + self.gamma_beta_ratio
             )
             constant_term = ref_logratios_scaled.detach()
             logits = pi_logratios - constant_term
@@ -128,14 +128,14 @@ class AlphaDPOTrainer(DPOTrainer):
                 self.beta
                 * (
                     policy_chosen_logps
-                    - alphas * (policy_chosen_logps - reference_chosen_logps)
+                    - self.alpha * (policy_chosen_logps - reference_chosen_logps)
                 ).detach()
             )
             rejected_rewards = (
                 self.beta
                 * (
                     policy_rejected_logps
-                    - alphas * (policy_rejected_logps - reference_rejected_logps)
+                    - self.alpha * (policy_rejected_logps - reference_rejected_logps)
                 ).detach()
             )
             # print("self.beta, logits, self.label_smoothing, chosen_rewards, rejected_rewards")
@@ -295,6 +295,7 @@ class AlphaDPOTrainer(DPOTrainer):
         metrics[f"{prefix}rewards/chosen"] = chosen_rewards.mean().cpu()
         metrics[f"{prefix}rewards/rejected"] = rejected_rewards.mean().cpu()
         metrics[f"{prefix}rewards/accuracies"] = reward_accuracies.mean().cpu()
+        metrics[f"{prefix}rewards/ref_accuracies"] = (chosen_rewards > rejected_rewards).float().mean().cpu()
         metrics[f"{prefix}rewards/margins"] = (
             (chosen_rewards - rejected_rewards).mean().cpu()
         )

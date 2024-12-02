@@ -101,15 +101,16 @@ if __name__ == "__main__":
         )
         for prompt in all_prompts
     ]
-    sampling_params = SamplingParams(
-        temperature=args.temperature,
-        top_p=args.top_p,
-        max_tokens=args.max_tokens,
-        seed=args.seed,
-    )
     
     
-    for _ in range(10):
+    
+    for i in range(10):
+        sampling_params = SamplingParams(
+            temperature=args.temperature,
+            top_p=args.top_p,
+            max_tokens=args.max_tokens,
+            seed=args.seed + i,
+        )
         
         outputs = ref_llm.generate(conversations, sampling_params)
 
