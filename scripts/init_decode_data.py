@@ -27,7 +27,7 @@ parser.add_argument(
     help="Path to the LLM model",
 )
 parser.add_argument(
-    "--temperature", type=float, default=1.0, help="Temperature for sampling"
+    "--temperature", type=float, default=1.2, help="Temperature for sampling"
 )
 parser.add_argument(
     "--top_p", type=float, default=0.95, help="Top-p probability for sampling"
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     if args.debug and args.num_samples < len(all_prompts):
         all_prompts = np.random.choice(all_prompts, size=args.num_samples, replace=False)
     
-    prompt_resp_dict = defaultdict(list)
+    prompt_resp_dict = defaultdict(set)
 
     ref_llm = LLM(model=ref_model)
     ref_tokenizer = ref_llm.get_tokenizer()
@@ -114,7 +114,7 @@ if __name__ == "__main__":
         outputs = ref_llm.generate(conversations, sampling_params)
 
         for i, output in enumerate(outputs):
-            prompt_resp_dict[all_prompts[i]].append(output.outputs[0].text)
+            prompt_resp_dict[all_prompts[i]].add(output.outputs[0].text)
             # if i < len(d_prompts):
             #     prompt_resp_dict[d_prompts[i]].append(output.outputs[0].text)
             # else:
@@ -147,13 +147,16 @@ if __name__ == "__main__":
             #     if obj["prompt"] in prompt_resp_dict:
             #         obj["chosen"][1]["content"] = prompt_resp_dict[obj["prompt"]]
             #     obj["alpha"] = 0.2
-            # if obj["prompt"] in prompt_set: continue
+            if obj["prompt"] in prompt_set: continue
             if obj["prompt"] in prompt_resp_dict:
+                candidate_prompts = list(prompt_resp_dict[obj["prompt"]])
                 if not args.ori_rej:
-                    obj["rejected"][1]["content"] = random.choice(prompt_resp_dict[obj["prompt"]])
+                    obj["rejected"][1]["content"] = random.choice(candidate_prompts)
                 if obj["type"] == "DBAR":
-                    obj["rejected"][1]["content"] = random.choice(prompt_resp_dict[obj["prompt"]])
-                    obj["chosen"][1]["content"] = random.choice(prompt_resp_dict[obj["prompt"]])
+                    if len(candidate_prompts) <= 1:
+                        candidate_prompts.extend([obj["rejected"][1]["content"], obj["chosen"][1]["content"]])
+                    obj["rejected"][1]["content"] = random.choice(candidate_prompts)
+                    obj["chosen"][1]["content"] = random.choice(candidate_prompts)
                 if obj["type"] == "DBAR":
                     obj["alpha"] = 1.0
                 else:
