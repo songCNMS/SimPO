@@ -4,5 +4,6 @@ datasets
 jsonlines
 omegaconf
 wandb
-trl=0.11.3
+trl==0.11.3
 transformers==4.44.0
+huggingface-hub==0.24.7

@@ -67,7 +67,6 @@ if __name__ == "__main__":
 
     data_dir_loc = os.path.join(os.getenv("AMLT_DATA_DIR", "./data/"))
 
-    output_data = []
     d_prompts = []
     dbar_prompts = []
     with jsonlines.open(f"{data_dir_loc}/all_train_data.json") as reader:
@@ -79,17 +78,18 @@ if __name__ == "__main__":
 
     d_prompts = sorted(list(set(d_prompts)))
     dbar_prompts = sorted(list(set(dbar_prompts)))
-    if len(dbar_prompts) > len(d_prompts):
+    if len(dbar_prompts) > len(d_prompts)*0.2:
         dbar_prompts = np.random.choice(
-            dbar_prompts, size=len(d_prompts), replace=False
+            dbar_prompts, size=int(len(d_prompts)*0.2), replace=False
         )
 
     all_prompts = list(d_prompts) + list(dbar_prompts)
     
+    all_prompts = list(d_prompts)
     if args.debug and args.num_samples < len(all_prompts):
         all_prompts = np.random.choice(all_prompts, size=args.num_samples, replace=False)
     
-    prompt_resp_dict = defaultdict(set)
+    prompt_resp_dict = defaultdict(list)
 
     ref_llm = LLM(model=ref_model)
     ref_tokenizer = ref_llm.get_tokenizer()
@@ -109,13 +109,14 @@ if __name__ == "__main__":
             temperature=args.temperature,
             top_p=args.top_p,
             max_tokens=args.max_tokens,
+            logprobs=20,
             seed=args.seed + i,
         )
         
         outputs = ref_llm.generate(conversations, sampling_params)
 
         for i, output in enumerate(outputs):
-            prompt_resp_dict[all_prompts[i]].add(output.outputs[0].text)
+            prompt_resp_dict[all_prompts[i]].append((output.outputs[0].cumulative_logprob, output.outputs[0].text))
             # if i < len(d_prompts):
             #     prompt_resp_dict[d_prompts[i]].append(output.outputs[0].text)
             # else:
@@ -138,6 +139,10 @@ if __name__ == "__main__":
     #     prompt_resp_dict[dbar_prompts[i]] = output.outputs[0].text
 
     prompt_set = set()
+    
+    output_train_data = []
+    output_test_data = []
+    
     with jsonlines.open(f"{data_dir_loc}/all_train_data.json") as reader:
         for obj in reader:
             # if obj["type"] == "D":
@@ -150,33 +155,42 @@ if __name__ == "__main__":
             #     obj["alpha"] = 0.2
             if obj["prompt"] in prompt_set: continue
             if obj["prompt"] in prompt_resp_dict:
-                candidate_prompts = list(prompt_resp_dict[obj["prompt"]])
+                candidate_prompts = sorted(prompt_resp_dict[obj["prompt"]], key=lambda x: x[0], reverse=True)
                 if not args.ori_rej:
-                    obj["rejected"][1]["content"] = random.choice(candidate_prompts)
+                    obj["rejected"][1]["content"] = random.choice(candidate_prompts)[1]
                 if obj["type"] == "DBAR":
-                    if len(candidate_prompts) <= 1:
-                        candidate_prompts.extend([obj["rejected"][1]["content"], obj["chosen"][1]["content"]])
-                    obj["rejected"][1]["content"] = random.choice(candidate_prompts)
-                    obj["chosen"][1]["content"] = random.choice(candidate_prompts)
+                    obj["rejected"][1]["content"] = candidate_prompts[-1][1]
+                    obj["chosen"][1]["content"] = candidate_prompts[0][1]
+                    # if len(candidate_prompts) <= 1:
+                    #     candidate_prompts.extend([obj["rejected"][1]["content"], obj["chosen"][1]["content"]])
+                    # obj["rejected"][1]["content"] = random.choice(candidate_prompts)
+                    # obj["chosen"][1]["content"] = random.choice(candidate_prompts)
                 if obj["type"] == "DBAR":
                     obj["alpha"] = 1.0
+                    output_test_data.append(obj)
                 else:
                     obj["alpha"] = 0.0
-                output_data.append(obj)
+                    if random.random() <= 0.2:
+                        output_test_data.append(obj)
+                    else:
+                        output_train_data.append(obj)
                 prompt_set.add(obj["prompt"])
 
     # with open(os.path.join(args.output_dir, output_file), 'w') as f:
     #     json.dump(output_data, f, indent=4)
 
     with jsonlines.open(os.path.join(args.output_dir, output_file), "w") as writter:
-        writter.write_all(output_data)
+        writter.write_all(output_train_data + output_test_data)
 
     print(f"Outputs saved to {os.path.join(args.output_dir, output_file)}")
-
-    dataset = datasets.Dataset.from_list(output_data)
+    
+    dataset = datasets.DatasetDict({
+        "train": datasets.Dataset.from_list(output_train_data),
+        "test": datasets.Dataset.from_list(output_test_data)
+    })
     # if args.debug and args.num_samples < len(dataset):
     #     dataset = dataset.shuffle(seed=42).select(range(args.num_samples))
-    dataset = dataset.train_test_split(test_size=0.2)
+    # dataset = dataset.train_test_split(test_size=0.2)
     dataset.save_to_disk(
         os.path.join(args.output_dir, f"{args.algo}_dataset_{args.epoch}")
     )
