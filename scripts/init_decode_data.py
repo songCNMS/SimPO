@@ -84,8 +84,6 @@ if __name__ == "__main__":
         )
 
     all_prompts = list(d_prompts) + list(dbar_prompts)
-    
-    all_prompts = list(d_prompts)
     if args.debug and args.num_samples < len(all_prompts):
         all_prompts = np.random.choice(all_prompts, size=args.num_samples, replace=False)
     
@@ -145,29 +143,24 @@ if __name__ == "__main__":
     
     with jsonlines.open(f"{data_dir_loc}/all_train_data.json") as reader:
         for obj in reader:
-            # if obj["type"] == "D":
-            #     if obj["prompt"] in prompt_resp_dict:
-            #         obj["rejected"][1]["content"] = prompt_resp_dict[obj["prompt"]]
-            #     obj["alpha"] = 0.2 if args.algo == "alphaDPO-DA" else 2.0
-            # else:
-            #     if obj["prompt"] in prompt_resp_dict:
-            #         obj["chosen"][1]["content"] = prompt_resp_dict[obj["prompt"]]
-            #     obj["alpha"] = 0.2
             if obj["prompt"] in prompt_set: continue
             if obj["prompt"] in prompt_resp_dict:
                 candidate_prompts = sorted(prompt_resp_dict[obj["prompt"]], key=lambda x: x[0], reverse=True)
                 if not args.ori_rej:
                     obj["rejected"][1]["content"] = random.choice(candidate_prompts)[1]
                 if obj["type"] == "DBAR":
-                    obj["rejected"][1]["content"] = candidate_prompts[-1][1]
-                    obj["chosen"][1]["content"] = candidate_prompts[0][1]
-                    # if len(candidate_prompts) <= 1:
-                    #     candidate_prompts.extend([obj["rejected"][1]["content"], obj["chosen"][1]["content"]])
-                    # obj["rejected"][1]["content"] = random.choice(candidate_prompts)
-                    # obj["chosen"][1]["content"] = random.choice(candidate_prompts)
-                if obj["type"] == "DBAR":
                     obj["alpha"] = 1.0
-                    output_test_data.append(obj)
+                    if random.random() >= 0.2:
+                        obj["rejected"][1]["content"] = candidate_prompts[-1][1]
+                        obj["chosen"][1]["content"] = candidate_prompts[0][1]
+                        output_train_data.append(obj)
+                    else:
+                        candidate_prompts = list(set([x[1] for x in candidate_prompts]))
+                        if len(candidate_prompts) <= 1:
+                            candidate_prompts.extend([obj["rejected"][1]["content"], obj["chosen"][1]["content"]])
+                        obj["rejected"][1]["content"] = random.choice(candidate_prompts)
+                        obj["chosen"][1]["content"] = random.choice(candidate_prompts)
+                        output_test_data.append(obj)
                 else:
                     obj["alpha"] = 0.0
                     if random.random() <= 0.2:
