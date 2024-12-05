@@ -128,12 +128,14 @@ def apply_chat_template(
     return example
 
 
-def main(ep=1):
+def main(cfg, ep=1):
     parser = H4ArgumentParser((ModelArguments, DataArguments, SimPOConfig))
     model_args, data_args, training_args = parser.parse()
     
     # training_args.output_dir = training_args.output_dir + f"_{ep}"
     data_dir = list(data_args.dataset_mixer.keys())[0]
+    if cfg.get("data_dir", None) is not None:
+        data_dir = cfg["data_dir"]
     data_args.dataset_mixer = {f"{data_dir}/{training_args.trainer_type}_dataset_{ep}": 1.0}
     ref_model = model_args.model_name_or_path
     model_args.model_name_or_path = training_args.output_dir + f"/{training_args.trainer_type}_{ep}"
@@ -337,7 +339,7 @@ if __name__ == "__main__":
     cfg = OmegaConf.from_cli()
     ep = cfg.epoch
     exp_name = cfg.exp_name
-    eval_d_metrics, eval_dbar_metrics = main(ep=ep)
+    eval_d_metrics, eval_dbar_metrics = main(cfg, ep=ep)
     eval_d_metrics["exp_name"] = f"D_{exp_name}_{ep}"
     eval_dbar_metrics["exp_name"] = f"DBAR_{exp_name}_{ep}"
     run_name = cfg.get("run_name", datetime.today().strftime("%Y%m%d%H%M%S"))

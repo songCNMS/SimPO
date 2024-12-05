@@ -127,12 +127,14 @@ def apply_chat_template(
     return example
 
 
-def main(ep=1):
+def main(cfg, ep=1):
     parser = H4ArgumentParser((ModelArguments, DataArguments, SimPOConfig))
     model_args, data_args, training_args = parser.parse()
     output_dir = training_args.output_dir
     training_args.output_dir = training_args.output_dir + f"/{training_args.trainer_type}_{ep}"
     data_dir = list(data_args.dataset_mixer.keys())[0]
+    if cfg.get("data_dir", None) is not None:
+        data_dir = cfg["data_dir"]
     data_args.dataset_mixer = {f"{data_dir}/{training_args.trainer_type}_dataset_{ep}": 1.0}
     ref_model = model_args.model_name_or_path
     if ep > 1:
@@ -369,7 +371,7 @@ if __name__ == "__main__":
     # if os.path.exists(f"/home/lesong/codes/SimPO/outputs/llama-3-3b-instruct-simpo-v2_{ep}"):
     #     sys.exit(0)
     
-    metrics, output_dir = main(ep=ep)
+    metrics, output_dir = main(cfg, ep=ep)
     # with jsonlines.open("metrics.jsonl", "a") as writter:
     #         writter.write(metrics)
     sys.exit(0)
