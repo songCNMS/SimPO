@@ -154,7 +154,8 @@ if __name__ == "__main__":
                 if obj["type"] == "DBAR":
                     obj["alpha"] = 1.0
                     if random.random() >= 0.2:
-                        obj["rejected"][1]["content"] = candidate_prompts[-1][1]
+                        if not args.ori_rej:
+                            obj["rejected"][1]["content"] = candidate_prompts[-1][1]
                         obj["chosen"][1]["content"] = candidate_prompts[0][1]
                         output_train_data.append(obj)
                     else:
