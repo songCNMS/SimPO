@@ -102,19 +102,21 @@ if __name__ == "__main__":
     
     
     
-    for i in range(10):
+    for i in range(3):
         sampling_params = SamplingParams(
-            temperature=args.temperature,
+            # temperature=args.temperature,
+            temperature=i/2.0,
             top_p=args.top_p,
             max_tokens=args.max_tokens,
-            logprobs=20,
+            # logprobs=20,
             seed=args.seed + i,
         )
         
         outputs = ref_llm.generate(conversations, sampling_params)
 
         for i, output in enumerate(outputs):
-            prompt_resp_dict[all_prompts[i]].append((output.outputs[0].cumulative_logprob, output.outputs[0].text))
+            prompt_resp_dict[all_prompts[i]].append((1.0, output.outputs[0].text))
+            # prompt_resp_dict[all_prompts[i]].append((output.outputs[0].cumulative_logprob, output.outputs[0].text))
             # if i < len(d_prompts):
             #     prompt_resp_dict[d_prompts[i]].append(output.outputs[0].text)
             # else:
@@ -145,7 +147,8 @@ if __name__ == "__main__":
         for obj in reader:
             if obj["prompt"] in prompt_set: continue
             if obj["prompt"] in prompt_resp_dict:
-                candidate_prompts = sorted(prompt_resp_dict[obj["prompt"]], key=lambda x: x[0], reverse=True)
+                # candidate_prompts = sorted(prompt_resp_dict[obj["prompt"]], key=lambda x: x[0], reverse=True)
+                candidate_prompts = prompt_resp_dict[obj["prompt"]]
                 if not args.ori_rej:
                     obj["rejected"][1]["content"] = random.choice(candidate_prompts)[1]
                 if obj["type"] == "DBAR":
