@@ -115,7 +115,7 @@ if __name__ == "__main__":
         outputs = ref_llm.generate(conversations, sampling_params)
 
         for i, output in enumerate(outputs):
-            prompt_resp_dict[all_prompts[i]].append((1.0, output.outputs[0].text))
+            prompt_resp_dict[all_prompts[i]].append((3.0-i, output.outputs[0].text))
             # prompt_resp_dict[all_prompts[i]].append((output.outputs[0].cumulative_logprob, output.outputs[0].text))
             # if i < len(d_prompts):
             #     prompt_resp_dict[d_prompts[i]].append(output.outputs[0].text)
