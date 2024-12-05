@@ -85,7 +85,7 @@ if __name__ == "__main__":
 
     all_prompts = list(d_prompts) + list(dbar_prompts)
     
-    all_prompts = list(d_prompts)
+    # all_prompts = list(d_prompts)
     if args.debug and args.num_samples < len(all_prompts):
         all_prompts = np.random.choice(all_prompts, size=args.num_samples, replace=False)
     
@@ -104,19 +104,19 @@ if __name__ == "__main__":
     
     
     
-    for i in range(10):
+    for i in range(3):
         sampling_params = SamplingParams(
             temperature=args.temperature,
             top_p=args.top_p,
             max_tokens=args.max_tokens,
-            logprobs=20,
+            logprobs=10,
             seed=args.seed + i,
         )
         
         outputs = ref_llm.generate(conversations, sampling_params)
 
-        for i, output in enumerate(outputs):
-            prompt_resp_dict[all_prompts[i]].append((output.outputs[0].cumulative_logprob, output.outputs[0].text))
+        for j, output in enumerate(outputs):
+            prompt_resp_dict[all_prompts[j]].append((output.outputs[0].cumulative_logprob, output.outputs[0].text))
             # if i < len(d_prompts):
             #     prompt_resp_dict[d_prompts[i]].append(output.outputs[0].text)
             # else:
@@ -159,7 +159,8 @@ if __name__ == "__main__":
                 if not args.ori_rej:
                     obj["rejected"][1]["content"] = random.choice(candidate_prompts)[1]
                 if obj["type"] == "DBAR":
-                    obj["rejected"][1]["content"] = candidate_prompts[-1][1]
+                    if not args.ori_rej:
+                        obj["rejected"][1]["content"] = candidate_prompts[-1][1]
                     obj["chosen"][1]["content"] = candidate_prompts[0][1]
                     # if len(candidate_prompts) <= 1:
                     #     candidate_prompts.extend([obj["rejected"][1]["content"], obj["chosen"][1]["content"]])

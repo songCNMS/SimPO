@@ -229,6 +229,8 @@ def main(ep=1):
             eval_d_list.append(item)
         else:
             eval_dbar_list.append(item)
+    
+    print("len: ", len(eval_d_list), len(eval_dbar_list))
             
     eval_d_dataset = datasets.Dataset.from_list(eval_d_list)
     eval_dbar_dataset = datasets.Dataset.from_list(eval_dbar_list)
@@ -342,7 +344,8 @@ if __name__ == "__main__":
     eval_dbar_metrics["exp_name"] = f"DBAR_{exp_name}_{ep}"
     run_name = cfg.get("run_name", datetime.today().strftime("%Y%m%d%H%M%S"))
     
-    output_dir_loc = os.path.join(os.getenv('AMLT_OUTPUT_DIR', f"./logs/{run_name}/"))
+    # output_dir_loc = os.path.join(os.getenv('AMLT_OUTPUT_DIR', f"./logs/{run_name}/"))
+    output_dir_loc = f"./logs/{run_name}/"
     os.makedirs(output_dir_loc, exist_ok=True)
     with jsonlines.open(f"{output_dir_loc}/metrics.jsonl", "a") as writter:
             writter.write(eval_d_metrics)
