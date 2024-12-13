@@ -173,6 +173,31 @@ class AlphaDPOTrainer(DPOTrainer):
             # print("self.beta, logits, self.label_smoothing, chosen_rewards, rejected_rewards")
             # print(self.beta, logits, self.label_smoothing, chosen_rewards, rejected_rewards)
             return losses, chosen_rewards, rejected_rewards, None
+        elif self.loss_type == "sft-reg-wot-ref":
+            neg_logratios = torch.abs(policy_rejected_logps - reference_rejected_logps)
+            pos_logratios = torch.abs(policy_chosen_logps - reference_chosen_logps)
+            logits =  policy_chosen_logps
+            losses = (1.0-alphas)*logits + 1.0*alphas*(neg_logratios + pos_logratios)
+
+            # losses = -F.logsigmoid(pos_logratios) - 0.1*F.logsigmoid(neg_logratios)
+            # print(self.beta, logits, self.label_smoothing)
+            chosen_rewards = (
+                self.beta
+                * (
+                    policy_chosen_logps
+                    - self.alpha * (policy_chosen_logps - reference_chosen_logps)
+                ).detach()
+            )
+            rejected_rewards = (
+                self.beta
+                * (
+                    policy_rejected_logps
+                    - self.alpha * (policy_rejected_logps - reference_rejected_logps)
+                ).detach()
+            )
+            # print("self.beta, logits, self.label_smoothing, chosen_rewards, rejected_rewards")
+            # print(self.beta, logits, self.label_smoothing, chosen_rewards, rejected_rewards)
+            return losses, chosen_rewards, rejected_rewards, None
         elif self.loss_type == "simpo":
             logits = policy_chosen_logps - policy_rejected_logps
             logits = logits - self.gamma_beta_ratio

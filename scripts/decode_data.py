@@ -1,12 +1,12 @@
-from vllm import LLM, SamplingParams
+# from vllm import LLM, SamplingParams
 from datasets import load_dataset, load_from_disk
 import os
 # os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER" # this is recommended for gemma-2 models; otherwise it is not needed
 import argparse
-import json
+# import json
 import jsonlines
 import numpy as np
-import datasets
+# import datasets
 import sys
 
 

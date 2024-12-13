@@ -6,7 +6,8 @@ conda run -n simpo_data python scripts/init_decode_data.py --train_model meta-ll
 
 for i in {1..1}
 do
-    for algo in SFTReg DPO SimPO alphaDPO
+    for algo in KTO
+    # SFTReg DPO SimPO alphaDPO
     do
         conda run -n simpo_data python scripts/decode_data.py --ref_model meta-llama/Llama-3.2-3B-Instruct --train_model /home/lesong/codes/SimPO/outputs/$algo_$i --epoch $i  --algo $algo --output_dir datasets/llama3_3b_ultrafeedback_ori;\
         conda run -n simpo python scripts/run_simpo.py training_configs/llama-3-3b-instruct-$algo-v2.yaml epoch=$i data_dir=datasets/llama3_3b_ultrafeedback_ori;\
@@ -19,7 +20,8 @@ conda run -n simpo_data python scripts/init_decode_data.py --train_model Qwen/Qw
 
 for i in {1..1}
 do
-    for algo in SFTReg DPO SimPO alphaDPO
+    for algo in KTO
+    # SFTReg DPO SimPO alphaDPO
     do
         conda run -n simpo_data python scripts/decode_data.py --ref_model Qwen/Qwen2.5-3B-Instruct --train_model /home/lesong/codes/SimPO/outputs/$algo_$i --epoch $i  --algo $algo --output_dir datasets/qwen25_3b_ultrafeedback_ori;\
         conda run -n simpo python scripts/run_simpo.py training_configs/qwen25-3b-instruct-$algo-v2.yaml epoch=$i data_dir=datasets/qwen25_3b_ultrafeedback_ori;\
@@ -34,7 +36,8 @@ conda run -n simpo_data python scripts/init_decode_data.py --train_model meta-ll
 
 for i in {1..1}
 do
-    for algo in SFTReg DPO SimPO alphaDPO
+    for algo in KTO
+    # SFTReg DPO SimPO alphaDPO
     do
         conda run -n simpo_data python scripts/decode_data.py --ref_model meta-llama/Llama-3.2-3B-Instruct --train_model /home/lesong/codes/SimPO/outputs/$algo_$i --epoch $i  --algo $algo --output_dir datasets/llama3_3b_ultrafeedback;\
         conda run -n simpo python scripts/run_simpo.py training_configs/llama-3-3b-instruct-$algo-v2.yaml epoch=$i  data_dir=datasets/llama3_3b_ultrafeedback;\
@@ -47,7 +50,8 @@ conda run -n simpo_data python scripts/init_decode_data.py --train_model Qwen/Qw
 
 for i in {1..1}
 do
-    for algo in SFTReg DPO SimPO alphaDPO
+    for algo in KTO
+    # SFTReg DPO SimPO alphaDPO
     do
         conda run -n simpo_data python scripts/decode_data.py --ref_model Qwen/Qwen2.5-3B-Instruct --train_model /home/lesong/codes/SimPO/outputs/$algo_$i --epoch $i  --algo $algo --output_dir datasets/qwen25_3b_ultrafeedback;\
         conda run -n simpo python scripts/run_simpo.py training_configs/qwen25-3b-instruct-$algo-v2.yaml epoch=$i data_dir=datasets/qwen25_3b_ultrafeedback;\
