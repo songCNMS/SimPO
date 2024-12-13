@@ -53,6 +53,8 @@ save_total_limit: 20
 seed: 42
 warmup_ratio: 0.1""")
 
+os.makedirs("batch_trainer_configs", exist_ok=True)
+
 alpha = 0.4
 beta = 1.0
 # trainer_types = ["DPO-sigmoid", "alphaDPO", "SimPO", "IPO", "KTO", 'rDPO', 'SFTReg', "SFTRegWoTRef"]
