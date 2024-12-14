@@ -102,7 +102,7 @@ if __name__ == "__main__":
     
     
     
-    for i in range(3):
+    for i in range(10):
         sampling_params = SamplingParams(
             temperature=args.temperature,
             # temperature=i/2.0,
@@ -138,9 +138,9 @@ if __name__ == "__main__":
     #     prompt_resp_dict[dbar_prompts[i]] = output.outputs[0].text
 
     prompt_set = set()
-    
     output_train_data = []
     output_test_data = []
+    output_valid_data = []
     
     with jsonlines.open(f"{data_dir_loc}/all_train_data.json") as reader:
         for obj in reader:
@@ -150,17 +150,19 @@ if __name__ == "__main__":
                 # candidate_prompts = prompt_resp_dict[obj["prompt"]]
                 if not args.ori_rej:
                     obj["rejected"][1]["content"] = random.choice(candidate_prompts)[1]
+                    
+                candidate_prompts = list(set([x[1] for x in candidate_prompts]))
                 if obj["type"] == "DBAR":
                     obj["alpha"] = 1.0
-                    if random.random() >= 0.2:
-                        if not args.ori_rej:
-                            obj["rejected"][1]["content"] = candidate_prompts[-1][1]
-                        obj["chosen"][1]["content"] = candidate_prompts[0][1]
-                        output_train_data.append(obj)
-                    else:
-                        candidate_prompts = list(set([x[1] for x in candidate_prompts]))
-                        if len(candidate_prompts) <= 1:
-                            candidate_prompts.extend([obj["rejected"][1]["content"], obj["chosen"][1]["content"]])
+                    if random.random() <= 0.2:
+                    #     if not args.ori_rej:
+                    #         obj["rejected"][1]["content"] = candidate_prompts[-1][1]
+                    #     obj["chosen"][1]["content"] = candidate_prompts[0][1]
+                    #     # output_train_data.append(obj)
+                    # else:
+                        # candidate_prompts = list(set([x[1] for x in candidate_prompts]))
+                        # if len(candidate_prompts) <= 1:
+                        #     candidate_prompts.extend([obj["rejected"][1]["content"], obj["chosen"][1]["content"]])
                         obj["rejected"][1]["content"] = random.choice(candidate_prompts)
                         obj["chosen"][1]["content"] = random.choice(candidate_prompts)
                         output_test_data.append(obj)
@@ -168,8 +170,18 @@ if __name__ == "__main__":
                     obj["alpha"] = 0.0
                     if random.random() <= 0.2:
                         output_test_data.append(obj)
+                        c_obj = obj.copy(deep=True)
+                        c_obj["rejected"][1]["content"] = random.choice(candidate_prompts)
+                        c_obj["chosen"][1]["content"] = random.choice(candidate_prompts)
+                        output_valid_data.append(c_obj)
                     else:
                         output_train_data.append(obj)
+                        for _ in range(5):
+                            c_obj = obj.copy(deep=True)
+                            c_obj["rejected"][1]["content"] = random.choice(candidate_prompts)
+                            c_obj["chosen"][1]["content"] = random.choice(candidate_prompts)
+                            c_obj["alpha"] = 1.0
+                            output_valid_data.append(c_obj)
                 prompt_set.add(obj["prompt"])
 
     # with open(os.path.join(args.output_dir, output_file), 'w') as f:
@@ -182,7 +194,8 @@ if __name__ == "__main__":
     
     dataset = datasets.DatasetDict({
         "train": datasets.Dataset.from_list(output_train_data),
-        "test": datasets.Dataset.from_list(output_test_data)
+        "test": datasets.Dataset.from_list(output_test_data),
+        "val": datasets.Dataset.from_list(output_valid_data),
     })
     # if args.debug and args.num_samples < len(dataset):
     #     dataset = dataset.shuffle(seed=42).select(range(args.num_samples))
