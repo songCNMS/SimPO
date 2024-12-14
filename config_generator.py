@@ -60,8 +60,8 @@ beta = 1.0
 # trainer_types = ["DPO-sigmoid", "alphaDPO", "SimPO", "IPO", "KTO", 'rDPO', 'SFTReg', "SFTRegWoTRef"]
 # loss_types = ["sigmoid", "alpha-dpo", "simpo", "ipo", "kto", "rDPO", "sft-reg", "sft-reg-wot-ref"]
 
-trainer_types = ["SFTRegWoTRef"]
-loss_types = ["sft-reg-wot-ref"]
+trainer_types = ['SFTReg', "SFTRegWoTRef", "IPO", "KTO", 'rDPO']
+loss_types = ["sft-reg", "sft-reg-wot-ref", "ipo", "kto", "rDPO"]
 
 
 ref_model_names = ["llama3-3b", "qwen25-3b"]
@@ -77,8 +77,8 @@ for loss_type, trainer_type in zip(loss_types, trainer_types):
         for epoch in range(1, 2):
             os.system(f"python scripts/decode_data.py --ref_model {ref_model} --train_model /home/lesong/codes/SimPO/outputs/{loss_type}-{epoch} --epoch {epoch}  --algo {trainer_type} --output_dir datasets/{ref_model_name}-ori;")
             os.system(f"python scripts/run_simpo.py {config_loc} epoch={epoch} data_dir=datasets/{ref_model_name}-ori;")
-            os.system(f"python scripts/run_simpo_eval.py {config_loc}  epoch={epoch} exp_name={loss_type}-{epoch} data_dir=datasets/{ref_model_name}-ori;")
+            os.system(f"python scripts/run_simpo_eval.py {config_loc}  epoch={epoch} exp_name={loss_type}-{epoch} data_dir=datasets/{ref_model_name}-ori {ref_model_name}-{trainer_type}-beta{beta}-alpha{alpha}-ori;")
 
             os.system(f"python scripts/decode_data.py --ref_model {ref_model} --train_model /home/lesong/codes/SimPO/outputs/{loss_type}-{epoch} --epoch {epoch}  --algo {trainer_type} --output_dir datasets/{ref_model_name};")
             os.system(f"python scripts/run_simpo.py {config_loc} epoch={epoch} data_dir=datasets/{ref_model_name};")
-            os.system(f"python scripts/run_simpo_eval.py {config_loc}  epoch={epoch} exp_name={loss_type}-{epoch} data_dir=datasets/{ref_model_name};")
+            os.system(f"python scripts/run_simpo_eval.py {config_loc}  epoch={epoch} exp_name={loss_type}-{epoch} data_dir=datasets/{ref_model_name} run_name={ref_model_name}-{trainer_type}-beta{beta}-alpha{alpha};")
