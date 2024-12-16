@@ -73,8 +73,8 @@ task = cfg.get("task", "data")
 
 for ref_model, ref_model_name in zip(ref_models, ref_model_names):
   if task == "data":
-    os.system(f"python scripts/init_decode_data.py --train_model {ref_model} --ref_model {ref_model} --epoch 1 --algo cpo --num_samples 20000 --debug --output_dir datasets/{ref_model_name}-ori --ori_rej;")
-    os.system(f"python scripts/init_decode_data.py --train_model {ref_model} --ref_model {ref_model} --epoch 1 --algo cpo --num_samples 20000 --debug --output_dir datasets/{ref_model_name};")
+    os.system(f"python scripts/init_decode_data.py --train_model {ref_model} --ref_model {ref_model} --epoch 1 --algo cpo --num_samples 2000 --debug --output_dir datasets/{ref_model_name}-ori --ori_rej;")
+    os.system(f"python scripts/init_decode_data.py --train_model {ref_model} --ref_model {ref_model} --epoch 1 --algo cpo --num_samples 2000 --debug --output_dir datasets/{ref_model_name};")
   else:
     for loss_type, trainer_type in zip(loss_types, trainer_types):
       cfg = config_temp.substitute(alpha=alpha, beta=beta, trainer_type=trainer_type, loss_type=loss_type, ref_model=ref_model, ref_model_name=ref_model_name)

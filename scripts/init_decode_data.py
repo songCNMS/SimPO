@@ -11,6 +11,7 @@ import datasets
 import sys
 from collections import defaultdict
 import random
+import copy
 
 
 parser = argparse.ArgumentParser(description="Decode with vllm")
@@ -170,14 +171,14 @@ if __name__ == "__main__":
                     obj["alpha"] = 0.0
                     if random.random() <= 0.2:
                         output_test_data.append(obj)
-                        c_obj = obj.copy(deep=True)
+                        c_obj = copy.deepcopy(obj)
                         c_obj["rejected"][1]["content"] = random.choice(candidate_prompts)
                         c_obj["chosen"][1]["content"] = random.choice(candidate_prompts)
                         output_valid_data.append(c_obj)
                     else:
                         output_train_data.append(obj)
                         for _ in range(5):
-                            c_obj = obj.copy(deep=True)
+                            c_obj = copy.deepcopy(obj)
                             c_obj["rejected"][1]["content"] = random.choice(candidate_prompts)
                             c_obj["chosen"][1]["content"] = random.choice(candidate_prompts)
                             c_obj["alpha"] = 1.0
