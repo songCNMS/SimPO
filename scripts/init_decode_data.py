@@ -90,20 +90,20 @@ if __name__ == "__main__":
     
     prompt_resp_dict = defaultdict(list)
 
-    ref_llm = LLM(model=ref_model)
-    ref_tokenizer = ref_llm.get_tokenizer()
-    conversations = [
-        ref_tokenizer.apply_chat_template(
-            [{"role": "user", "content": prompt}],
-            tokenize=False,
-            add_generation_prompt=True,
-        )
-        for prompt in all_prompts
-    ]
     
     
     
     for i in range(10):
+        ref_llm = LLM(model=ref_model, gpu_memory_utilization=0.7)
+        ref_tokenizer = ref_llm.get_tokenizer()
+        conversations = [
+            ref_tokenizer.apply_chat_template(
+                [{"role": "user", "content": prompt}],
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+            for prompt in all_prompts
+        ]
         sampling_params = SamplingParams(
             temperature=args.temperature,
             # temperature=i/2.0,
@@ -122,8 +122,8 @@ if __name__ == "__main__":
             # else:
             #     prompt_resp_dict[dbar_prompts[i-len(d_prompts)]].append(output.outputs[0].text)
 
-    del ref_llm
-    del ref_tokenizer
+        del ref_llm
+        del ref_tokenizer
 
     # train_llm = LLM(model=train_model)
     # train_tokenizer = train_llm.get_tokenizer()
