@@ -6,14 +6,13 @@ import argparse
 import json
 import gpt_api_config
 import torch
-
+from config_generator import all_ref_model_names, all_ref_models
 # mistralai/Mistral-7B-Instruct-v0.2
 # google/gemma-2-9b-it
 # meta-llama/Llama-3.1-8B-Instruct
 # Qwen/Qwen2.5-7B-Instruct
 
-all_ref_model_names = ["llama3-3b", "qwen25-3b", "mistral-7b", "gemma2-9b"]
-all_ref_models = ["meta-llama/Llama-3.2-3B-Instruct", "Qwen/Qwen2.5-3B-Instruct", "mistralai/Mistral-7B-Instruct-v0.2", "google/gemma-2-9b-it"]
+
 
 if __name__ == "__main__":
 

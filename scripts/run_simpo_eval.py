@@ -152,9 +152,6 @@ def apply_chat_template(
 def main(cfg, ep=1):
     parser = H4ArgumentParser((ModelArguments, DataArguments, SimPOConfig))
     model_args, data_args, training_args = parser.parse()
-
-    output_dir_loc = os.path.join(os.getenv("AMLT_OUTPUT_DIR", f"./logs/{run_name}/"))
-
     # training_args.output_dir = training_args.output_dir + f"_{ep}"
     data_dir = list(data_args.dataset_mixer.keys())[0]
     if cfg.get("data_dir", None) is not None:
