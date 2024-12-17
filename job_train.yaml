@@ -18,7 +18,7 @@ target:
   workspace_name: rag-workspace-eastus
 
 data:
-  local_dir: ./
+  local_dir: ./data/
   remote_dir: data/
 
 code:
@@ -42,10 +42,10 @@ search:
     - python config_generator.py task=train trainer_types={trainer_types} ref_models={ref_models}
   type: hyperdrive  # hyperparameter search type: hyperdrive, random, grid.  Default: hyperdrive
   sampling: grid  # how to explore the hyperparameter space: random, grid or bayesian. Default: bayesian
-  max_trials: 10
-  parallel_trials: 10  # number of trials to run in parallel. Default: equals to max_trials.
+  max_trials: 14
+  # parallel_trials: 10  # number of trials to run in parallel. Default: equals to max_trials.
   params:
     - name: trainer_types
-      values: ["SFTReg", "DPO-sigmoid", "alphaDPO", "SimPO", "IPO", "KTO", "rDPO"]
+      values: ["SFTReg"] #, "DPO-sigmoid", "alphaDPO", "SimPO", "IPO", "KTO", "rDPO"]
     - name: ref_models
-      values: ["meta-llama/Llama-3.1-3B-Instruct", "Qwen/Qwen2.5-3B-Instruct"]
+      values: ["meta-llama/Llama-3.1-3B-Instruct"] #, "Qwen/Qwen2.5-3B-Instruct"]

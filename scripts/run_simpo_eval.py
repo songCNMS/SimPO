@@ -52,12 +52,13 @@ logger = logging.getLogger(__name__)
 
 MISTRAL_CHAT_TEMPLATE = "{% if messages[0]['role'] == 'system' %}{% set loop_messages = messages[1:] %}{% set system_message = messages[0]['content'].strip() + '\n\n' %}{% else %}{% set loop_messages = messages %}{% set system_message = '' %}{% endif %}{% for message in loop_messages %}{% if loop.index0 == 0 %}{% set content = system_message + message['content'] %}{% else %}{% set content = message['content'] %}{% endif %}{% if message['role'] == 'user' %}{{ '[INST] ' + content.strip() + ' [/INST]' }}{% elif message['role'] == 'assistant' %}{{ ' '  + content.strip() + ' ' + eos_token }}{% endif %}{% endfor %}"
 
+
 def apply_chat_template(
     example,
     tokenizer,
     task: Literal["sft", "generation", "rm", "simpo"],
     auto_insert_empty_system_msg: bool = True,
-    change_template = None,
+    change_template=None,
 ):
     if change_template == "mistral":
         tokenizer.chat_template = MISTRAL_CHAT_TEMPLATE
@@ -80,15 +81,21 @@ def apply_chat_template(
                 maybe_insert_system_message(chosen_messages, tokenizer)
                 maybe_insert_system_message(rejected_messages, tokenizer)
 
-            example["text_chosen"] = tokenizer.apply_chat_template(chosen_messages, tokenize=False)
-            example["text_rejected"] = tokenizer.apply_chat_template(rejected_messages, tokenize=False)
+            example["text_chosen"] = tokenizer.apply_chat_template(
+                chosen_messages, tokenize=False
+            )
+            example["text_rejected"] = tokenizer.apply_chat_template(
+                rejected_messages, tokenize=False
+            )
         else:
             raise ValueError(
                 f"Could not format example as dialogue for `rm` task! Require `[chosen, rejected]` keys but found {list(example.keys())}"
             )
     elif task == "simpo":
         if all(k in example.keys() for k in ("chosen", "rejected")):
-            if not is_openai_format(example["chosen"]) or not is_openai_format(example["rejected"]):
+            if not is_openai_format(example["chosen"]) or not is_openai_format(
+                example["rejected"]
+            ):
                 raise ValueError(
                     f"Could not format example as dialogue for `{task}` task! Require OpenAI format for all messages"
                 )
@@ -109,13 +116,27 @@ def apply_chat_template(
             if auto_insert_empty_system_msg:
                 maybe_insert_system_message(prompt_messages, tokenizer)
 
-            example["text_prompt"] = tokenizer.apply_chat_template(prompt_messages, tokenize=False)
-            example["text_chosen"] = tokenizer.apply_chat_template(chosen_messages, tokenize=False)
-            if tokenizer.bos_token and example["text_chosen"].startswith(tokenizer.bos_token):
-                example["text_chosen"] = example["text_chosen"][len(tokenizer.bos_token):]
-            example["text_rejected"] = tokenizer.apply_chat_template(rejected_messages, tokenize=False)
-            if tokenizer.bos_token and example["text_rejected"].startswith(tokenizer.bos_token):
-                example["text_rejected"] = example["text_rejected"][len(tokenizer.bos_token):]
+            example["text_prompt"] = tokenizer.apply_chat_template(
+                prompt_messages, tokenize=False
+            )
+            example["text_chosen"] = tokenizer.apply_chat_template(
+                chosen_messages, tokenize=False
+            )
+            if tokenizer.bos_token and example["text_chosen"].startswith(
+                tokenizer.bos_token
+            ):
+                example["text_chosen"] = example["text_chosen"][
+                    len(tokenizer.bos_token) :
+                ]
+            example["text_rejected"] = tokenizer.apply_chat_template(
+                rejected_messages, tokenize=False
+            )
+            if tokenizer.bos_token and example["text_rejected"].startswith(
+                tokenizer.bos_token
+            ):
+                example["text_rejected"] = example["text_rejected"][
+                    len(tokenizer.bos_token) :
+                ]
         else:
             raise ValueError(
                 f"Could not format example as dialogue for `{task}` task! Require either the "
@@ -131,14 +152,22 @@ def apply_chat_template(
 def main(cfg, ep=1):
     parser = H4ArgumentParser((ModelArguments, DataArguments, SimPOConfig))
     model_args, data_args, training_args = parser.parse()
-    
+
+    output_dir_loc = os.path.join(os.getenv("AMLT_OUTPUT_DIR", f"./logs/{run_name}/"))
+
     # training_args.output_dir = training_args.output_dir + f"_{ep}"
     data_dir = list(data_args.dataset_mixer.keys())[0]
     if cfg.get("data_dir", None) is not None:
         data_dir = cfg["data_dir"]
-    data_args.dataset_mixer = {f"{data_dir}/{training_args.trainer_type}_dataset_{ep}": 1.0}
+    data_args.dataset_mixer = {
+        f"{data_dir}/{training_args.trainer_type}_dataset_{ep}": 1.0
+    }
     ref_model = model_args.model_name_or_path
-    model_args.model_name_or_path = training_args.output_dir + f"/{training_args.trainer_type}_{ep}"
+    model_args.model_name_or_path = os.path.join(
+        os.getenv("AMLT_OUTPUT_DIR", "./"),
+        training_args.output_dir,
+        f"/{training_args.trainer_type}_{ep}",
+    )
     #######
     # Setup
     #######
@@ -157,7 +186,6 @@ def main(cfg, ep=1):
     logger.info(f"Model parameters {model_args}")
     logger.info(f"Training/evaluation parameters {training_args}")
     logger.info(f"Data parameters {data_args}")
-    
 
     # Check for last checkpoint
     last_checkpoint = get_checkpoint(training_args)
@@ -174,7 +202,16 @@ def main(cfg, ep=1):
         data_args.dataset_mixer,
         splits=data_args.dataset_splits,
         configs=data_args.dataset_configs,
-        columns_to_keep=["messages", "chosen", "rejected", "prompt", "completion", "label", "type", "alpha"],
+        columns_to_keep=[
+            "messages",
+            "chosen",
+            "rejected",
+            "prompt",
+            "completion",
+            "label",
+            "type",
+            "alpha",
+        ],
         # seed=training_args.seed,
     )
     logger.info(
@@ -187,14 +224,15 @@ def main(cfg, ep=1):
     #####################################
     # Load tokenizer and process datasets
     #####################################
-    data_args.truncation_side = "left"  # Truncate from left to ensure we don't lose labels in final turn
+    data_args.truncation_side = (
+        "left"  # Truncate from left to ensure we don't lose labels in final turn
+    )
     tokenizer = get_tokenizer(model_args, data_args)
-    
+
     if ref_model.lower().find("qwen") >= 0:
         if tokenizer.eos_token is not None:
             tokenizer.add_special_tokens({"bos_token": tokenizer.eos_token})
             tokenizer.bos_token_id = tokenizer.eos_token_id
-
 
     if "mistral" in model_args.model_name_or_path.lower():
         change_template = "mistral"
@@ -217,13 +255,16 @@ def main(cfg, ep=1):
     )
 
     # Replace column names with what TRL needs, text_chosen -> chosen and text_rejected -> rejected
-    
-    
+
     for split in ["train", "test", "val"]:
         raw_datasets[split] = raw_datasets[split].rename_columns(
-            {"text_prompt": "prompt", "text_chosen": "chosen", "text_rejected": "rejected"}
+            {
+                "text_prompt": "prompt",
+                "text_chosen": "chosen",
+                "text_rejected": "rejected",
+            }
         )
-        
+
     eval_d_list = []
     eval_dbar_list = []
     eval_dori_list = []
@@ -232,18 +273,20 @@ def main(cfg, ep=1):
             eval_d_list.append(item)
         else:
             eval_dbar_list.append(item)
-            
+
     for item in raw_datasets["val"]:
         eval_dori_list.append(item)
-            
+
     eval_d_dataset = datasets.Dataset.from_list(eval_d_list)
     eval_dbar_dataset = datasets.Dataset.from_list(eval_dbar_list)
     eval_dori_dataset = datasets.Dataset.from_list(eval_dori_list)
 
     model = model_args.model_name_or_path
-    
+
     torch_dtype = (
-        model_args.torch_dtype if model_args.torch_dtype in ["auto", None] else getattr(torch, model_args.torch_dtype)
+        model_args.torch_dtype
+        if model_args.torch_dtype in ["auto", None]
+        else getattr(torch, model_args.torch_dtype)
     )
     quantization_config = get_quantization_config(model_args)
 
@@ -256,9 +299,9 @@ def main(cfg, ep=1):
         quantization_config=quantization_config,
         attn_implementation=model_args.attn_implementation,
     )
-    
+
     print(eval_d_dataset, eval_dbar_dataset)
-    
+
     training_args.model_init_kwargs = model_kwargs
     #########################
     # Instantiate SimPO trainer
@@ -275,18 +318,17 @@ def main(cfg, ep=1):
     # else:
     training_args.ref_model_init_kwargs = model_kwargs
     trainer = AlphaDPOTrainer(
-            model=model,
-            ref_model=ref_model,
-            args=training_args,
-            train_dataset=raw_datasets["test"],
-            eval_dataset=eval_d_dataset,
-            tokenizer=tokenizer,
-            peft_config=get_peft_config(model_args),
-            max_length=training_args.max_length,
-            max_prompt_length=training_args.max_prompt_length,
-            loss_type=training_args.loss_type,
-        )
-    
+        model=model,
+        ref_model=ref_model,
+        args=training_args,
+        train_dataset=raw_datasets["test"],
+        eval_dataset=eval_d_dataset,
+        tokenizer=tokenizer,
+        peft_config=get_peft_config(model_args),
+        max_length=training_args.max_length,
+        max_prompt_length=training_args.max_prompt_length,
+        loss_type=training_args.loss_type,
+    )
 
     ##########
     # Evaluate
@@ -294,8 +336,7 @@ def main(cfg, ep=1):
     logger.info("*** Evaluate D***")
     eval_d_metrics = trainer.evaluate()
     eval_d_metrics["eval_samples"] = len(eval_d_dataset)
-    
-    
+
     # if training_args.trainer_type == "simpo":
     # trainer = SimPOTrainer(
     #     model=model,
@@ -308,17 +349,17 @@ def main(cfg, ep=1):
     # else:
     training_args.ref_model_init_kwargs = model_kwargs
     trainer = AlphaDPOTrainer(
-            model=model,
-            ref_model=ref_model,
-            args=training_args,
-            train_dataset=raw_datasets["test"],
-            eval_dataset=eval_dbar_dataset,
-            tokenizer=tokenizer,
-            peft_config=get_peft_config(model_args),
-            max_length=training_args.max_length,
-            max_prompt_length=training_args.max_prompt_length,
-            loss_type=training_args.loss_type,
-        )
+        model=model,
+        ref_model=ref_model,
+        args=training_args,
+        train_dataset=raw_datasets["test"],
+        eval_dataset=eval_dbar_dataset,
+        tokenizer=tokenizer,
+        peft_config=get_peft_config(model_args),
+        max_length=training_args.max_length,
+        max_prompt_length=training_args.max_prompt_length,
+        loss_type=training_args.loss_type,
+    )
 
     ##########
     # Evaluate
@@ -326,25 +367,25 @@ def main(cfg, ep=1):
     logger.info("*** Evaluate DBAR***")
     eval_dbar_metrics = trainer.evaluate()
     eval_dbar_metrics["eval_samples"] = len(eval_dbar_dataset)
-    
+
     # trainer.log_metrics("eval", metrics)
     # trainer.save_metrics("eval", metrics)
 
     # logger.info("*** Training complete! ***")
-    
+
     training_args.ref_model_init_kwargs = model_kwargs
     trainer = AlphaDPOTrainer(
-            model=model,
-            ref_model=ref_model,
-            args=training_args,
-            train_dataset=raw_datasets["test"],
-            eval_dataset=eval_dori_dataset,
-            tokenizer=tokenizer,
-            peft_config=get_peft_config(model_args),
-            max_length=training_args.max_length,
-            max_prompt_length=training_args.max_prompt_length,
-            loss_type=training_args.loss_type,
-        )
+        model=model,
+        ref_model=ref_model,
+        args=training_args,
+        train_dataset=raw_datasets["test"],
+        eval_dataset=eval_dori_dataset,
+        tokenizer=tokenizer,
+        peft_config=get_peft_config(model_args),
+        max_length=training_args.max_length,
+        max_prompt_length=training_args.max_prompt_length,
+        loss_type=training_args.loss_type,
+    )
 
     ##########
     # Evaluate
@@ -370,15 +411,14 @@ if __name__ == "__main__":
     eval_dbar_metrics["exp_name"] = f"DBAR_{exp_name}_{ep}"
     eval_dori_metrics["exp_name"] = f"DORI_{exp_name}_{ep}"
     run_name = cfg.get("run_name", datetime.today().strftime("%Y%m%d%H%M%S"))
-    
-    output_dir_loc = os.path.join(os.getenv('AMLT_OUTPUT_DIR', f"./logs/{run_name}/"))
+
+    output_dir_loc = os.path.join(os.getenv("AMLT_OUTPUT_DIR", f"./logs/{run_name}/"))
     os.makedirs(output_dir_loc, exist_ok=True)
     with jsonlines.open(f"{output_dir_loc}/metrics.jsonl", "a") as writter:
-            writter.write(eval_d_metrics)
-            writter.write(eval_dbar_metrics)
-            writter.write(eval_dori_metrics)
-            
-            
+        writter.write(eval_d_metrics)
+        writter.write(eval_dbar_metrics)
+        writter.write(eval_dori_metrics)
+
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -387,20 +427,26 @@ if __name__ == "__main__":
             logging.StreamHandler(sys.stdout),
         ],
     )
-    
+
     if os.path.exists(f"{output_dir_loc}/metrics.csv"):
         df_ex = pd.read_csv(f"{output_dir_loc}/metrics.csv")
         metrics_monitor = df_ex.columns.tolist()
     else:
         df_ex = None
-        metrics_monitor = ["exp_name"] + [x for x in eval_d_metrics.keys() if x.startswith("eval_rewards") or x.startswith("eval_logps")]
-    
-    data = [[eval_d_metrics.get(x, None) for x in metrics_monitor], 
-            [eval_dbar_metrics.get(x, None) for x in metrics_monitor],
-            [eval_dori_metrics.get(x, None) for x in metrics_monitor]]
+        metrics_monitor = ["exp_name"] + [
+            x
+            for x in eval_d_metrics.keys()
+            if x.startswith("eval_rewards") or x.startswith("eval_logps")
+        ]
+
+    data = [
+        [eval_d_metrics.get(x, None) for x in metrics_monitor],
+        [eval_dbar_metrics.get(x, None) for x in metrics_monitor],
+        [eval_dori_metrics.get(x, None) for x in metrics_monitor],
+    ]
     df = pd.DataFrame(data=data, columns=metrics_monitor)
     if df_ex is not None:
         df = pd.concat([df_ex, df], axis=0)
-    
+
     df.to_csv(f"{output_dir_loc}/metrics.csv", index=False)
     sys.exit(0)

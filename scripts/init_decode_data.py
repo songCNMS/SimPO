@@ -66,7 +66,7 @@ if __name__ == "__main__":
     ref_model = args.ref_model
     train_model = args.train_model
 
-    data_dir_loc = os.path.join(os.getenv("AMLT_DATA_DIR", "./data/"))
+    data_dir_loc = os.path.join(os.getenv("AMLT_DATA_DIR", "data/"))
 
     d_prompts = []
     dbar_prompts = []
