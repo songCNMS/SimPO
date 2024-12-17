@@ -11,6 +11,7 @@ environment:
     - apt-get install -y nvidia-container-toolkit
     - export CUDA_HOME=/usr/local/cuda
     - export LD_LIBRARY_PATH=/usr/local/nvidia/lib64:$$LD_LIBRARY_PATH
+    - export PYTHONPATH=$PWD
     - pip install -r environment_simpo_data.yaml
     # - pip install flash-attn --no-build-isolation
     
