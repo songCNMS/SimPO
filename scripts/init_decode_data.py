@@ -94,7 +94,7 @@ if __name__ == "__main__":
     
     
     for i in range(10):
-        ref_llm = LLM(model=ref_model, gpu_memory_utilization=0.7)
+        ref_llm = LLM(model=ref_model, gpu_memory_utilization=0.9)
         ref_tokenizer = ref_llm.get_tokenizer()
         conversations = [
             ref_tokenizer.apply_chat_template(
