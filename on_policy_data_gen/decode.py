@@ -4,7 +4,7 @@ import os
 # os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER" # this is recommended for gemma-2 models; otherwise it is not needed
 import argparse
 import json
-import on_policy_data_gen.gpt_api_config
+import gpt_api_config
 import torch
 
 # mistralai/Mistral-7B-Instruct-v0.2
