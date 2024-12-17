@@ -180,7 +180,7 @@ if __name__ == "__main__":
                             c_obj["rejected"][1]["content"] = random.choice(candidate_prompts)
                             c_obj["chosen"][1]["content"] = random.choice(candidate_prompts)
                             c_obj["alpha"] = 1.0
-                            output_valid_data.append(c_obj)
+                            output_train_data.append(c_obj)
                 prompt_set.add(obj["prompt"])
 
     # with open(os.path.join(args.output_dir, output_file), 'w') as f:

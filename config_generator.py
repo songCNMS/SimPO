@@ -67,8 +67,6 @@ all_loss_types = ["sigmoid", "alpha-dpo", "simpo", "ipo", "kto", "rDPO", "sft-re
 
 cfg = OmegaConf.from_cli()
 task = cfg.get("task", "data")
-trainer_types = cfg.trainer_types.split(",")
-loss_types = [all_loss_types[all_trainer_types.index(trainer_type)] for trainer_type in trainer_types]
 ref_models = cfg.ref_models.split(",")
 ref_model_names = [all_ref_model_names[all_ref_models.index(ref_model)] for ref_model in ref_models]
 alpha = cfg.get("alpha", 0.4)
@@ -88,8 +86,10 @@ for ref_model, ref_model_name in zip(ref_models, ref_model_names):
             f"python scripts/init_decode_data.py --train_model {ref_model} --ref_model {ref_model} --epoch 1 --algo cpo --num_samples 2000 --debug --output_dir {output_dir}/datasets/{ref_model_name};"
         )
     else:
+        trainer_types = cfg.trainer_types.split(",")
+        loss_types = [all_loss_types[all_trainer_types.index(trainer_type)] for trainer_type in trainer_types]
         for loss_type, trainer_type in zip(loss_types, trainer_types):
-            cfg = config_temp.substitute(
+            config = config_temp.substitute(
                 alpha=alpha,
                 beta=beta,
                 trainer_type=trainer_type,
@@ -99,7 +99,7 @@ for ref_model, ref_model_name in zip(ref_models, ref_model_names):
             )
             config_loc = f"batch_trainer_configs/{ref_model_name}-{trainer_type}-beta{beta}-alpha{alpha}.yaml"
             with open(config_loc, "w") as f:
-                f.writelines(cfg)
+                f.writelines(config)
             for epoch in range(1, 2):
                 os.system(
                     f"python scripts/decode_data.py --ref_model {ref_model} --train_model {output_dir}/outputs/{loss_type}-{epoch} --epoch {epoch}  --algo {trainer_type} --output_dir {data_dir}/datasets/{ref_model_name}-ori;"

@@ -219,21 +219,26 @@ def main(cfg, ep=1):
     # Replace column names with what TRL needs, text_chosen -> chosen and text_rejected -> rejected
     
     
-    for split in ["train", "test"]:
+    for split in ["train", "test", "val"]:
         raw_datasets[split] = raw_datasets[split].rename_columns(
             {"text_prompt": "prompt", "text_chosen": "chosen", "text_rejected": "rejected"}
         )
         
     eval_d_list = []
     eval_dbar_list = []
+    eval_dori_list = []
     for item in raw_datasets["test"]:
         if item["type"] == "D":
             eval_d_list.append(item)
         else:
             eval_dbar_list.append(item)
             
+    for item in raw_datasets["val"]:
+        eval_dori_list.append(item)
+            
     eval_d_dataset = datasets.Dataset.from_list(eval_d_list)
     eval_dbar_dataset = datasets.Dataset.from_list(eval_dbar_list)
+    eval_dori_dataset = datasets.Dataset.from_list(eval_dori_list)
 
     model = model_args.model_name_or_path
     
@@ -259,28 +264,28 @@ def main(cfg, ep=1):
     # Instantiate SimPO trainer
     #########################
     # if training_args.trainer_type == "simpo":
-    trainer = SimPOTrainer(
-        model=model,
-        args=training_args,
-        train_dataset=raw_datasets["test"],
-        eval_dataset=eval_d_dataset,
-        tokenizer=tokenizer,
-        peft_config=get_peft_config(model_args),
-    )
+    # trainer = SimPOTrainer(
+    #     model=model,
+    #     args=training_args,
+    #     train_dataset=raw_datasets["test"],
+    #     eval_dataset=eval_d_dataset,
+    #     tokenizer=tokenizer,
+    #     peft_config=get_peft_config(model_args),
+    # )
     # else:
-    # training_args.ref_model_init_kwargs = model_kwargs
-    # trainer = AlphaDPOTrainer(
-    #         model=model,
-    #         ref_model=ref_model,
-    #         args=training_args,
-    #         train_dataset=raw_datasets["test"],
-    #         eval_dataset=eval_d_dataset,
-    #         tokenizer=tokenizer,
-    #         peft_config=get_peft_config(model_args),
-    #         max_length=training_args.max_length,
-    #         max_prompt_length=training_args.max_prompt_length,
-    #         loss_type=training_args.loss_type,
-    #     )
+    training_args.ref_model_init_kwargs = model_kwargs
+    trainer = AlphaDPOTrainer(
+            model=model,
+            ref_model=ref_model,
+            args=training_args,
+            train_dataset=raw_datasets["test"],
+            eval_dataset=eval_d_dataset,
+            tokenizer=tokenizer,
+            peft_config=get_peft_config(model_args),
+            max_length=training_args.max_length,
+            max_prompt_length=training_args.max_prompt_length,
+            loss_type=training_args.loss_type,
+        )
     
 
     ##########
@@ -292,28 +297,28 @@ def main(cfg, ep=1):
     
     
     # if training_args.trainer_type == "simpo":
-    trainer = SimPOTrainer(
-        model=model,
-        args=training_args,
-        train_dataset=raw_datasets["test"],
-        eval_dataset=eval_dbar_dataset,
-        tokenizer=tokenizer,
-        peft_config=get_peft_config(model_args),
-    )
+    # trainer = SimPOTrainer(
+    #     model=model,
+    #     args=training_args,
+    #     train_dataset=raw_datasets["test"],
+    #     eval_dataset=eval_dbar_dataset,
+    #     tokenizer=tokenizer,
+    #     peft_config=get_peft_config(model_args),
+    # )
     # else:
-    # training_args.ref_model_init_kwargs = model_kwargs
-    # trainer = AlphaDPOTrainer(
-    #         model=model,
-    #         ref_model=ref_model,
-    #         args=training_args,
-    #         train_dataset=raw_datasets["test"],
-    #         eval_dataset=eval_dbar_dataset,
-    #         tokenizer=tokenizer,
-    #         peft_config=get_peft_config(model_args),
-    #         max_length=training_args.max_length,
-    #         max_prompt_length=training_args.max_prompt_length,
-    #         loss_type=training_args.loss_type,
-    #     )
+    training_args.ref_model_init_kwargs = model_kwargs
+    trainer = AlphaDPOTrainer(
+            model=model,
+            ref_model=ref_model,
+            args=training_args,
+            train_dataset=raw_datasets["test"],
+            eval_dataset=eval_dbar_dataset,
+            tokenizer=tokenizer,
+            peft_config=get_peft_config(model_args),
+            max_length=training_args.max_length,
+            max_prompt_length=training_args.max_prompt_length,
+            loss_type=training_args.loss_type,
+        )
 
     ##########
     # Evaluate
@@ -326,7 +331,28 @@ def main(cfg, ep=1):
     # trainer.save_metrics("eval", metrics)
 
     # logger.info("*** Training complete! ***")
-    return eval_d_metrics, eval_dbar_metrics
+    
+    training_args.ref_model_init_kwargs = model_kwargs
+    trainer = AlphaDPOTrainer(
+            model=model,
+            ref_model=ref_model,
+            args=training_args,
+            train_dataset=raw_datasets["test"],
+            eval_dataset=eval_dori_dataset,
+            tokenizer=tokenizer,
+            peft_config=get_peft_config(model_args),
+            max_length=training_args.max_length,
+            max_prompt_length=training_args.max_prompt_length,
+            loss_type=training_args.loss_type,
+        )
+
+    ##########
+    # Evaluate
+    ##########
+    logger.info("*** Evaluate DBAR***")
+    eval_dori_metrics = trainer.evaluate()
+    eval_dori_metrics["eval_samples"] = len(eval_dori_dataset)
+    return eval_d_metrics, eval_dbar_metrics, eval_dori_metrics
 
 
 from omegaconf import OmegaConf
@@ -339,9 +365,10 @@ if __name__ == "__main__":
     cfg = OmegaConf.from_cli()
     ep = cfg.epoch
     exp_name = cfg.exp_name
-    eval_d_metrics, eval_dbar_metrics = main(cfg, ep=ep)
+    eval_d_metrics, eval_dbar_metrics, eval_dori_metrics = main(cfg, ep=ep)
     eval_d_metrics["exp_name"] = f"D_{exp_name}_{ep}"
     eval_dbar_metrics["exp_name"] = f"DBAR_{exp_name}_{ep}"
+    eval_dori_metrics["exp_name"] = f"DORI_{exp_name}_{ep}"
     run_name = cfg.get("run_name", datetime.today().strftime("%Y%m%d%H%M%S"))
     
     output_dir_loc = os.path.join(os.getenv('AMLT_OUTPUT_DIR', f"./logs/{run_name}/"))
@@ -349,6 +376,7 @@ if __name__ == "__main__":
     with jsonlines.open(f"{output_dir_loc}/metrics.jsonl", "a") as writter:
             writter.write(eval_d_metrics)
             writter.write(eval_dbar_metrics)
+            writter.write(eval_dori_metrics)
             
             
     logging.basicConfig(
@@ -367,7 +395,9 @@ if __name__ == "__main__":
         df_ex = None
         metrics_monitor = ["exp_name"] + [x for x in eval_d_metrics.keys() if x.startswith("eval_rewards") or x.startswith("eval_logps")]
     
-    data = [[eval_d_metrics.get(x, None) for x in metrics_monitor], [eval_dbar_metrics.get(x, None) for x in metrics_monitor]]
+    data = [[eval_d_metrics.get(x, None) for x in metrics_monitor], 
+            [eval_dbar_metrics.get(x, None) for x in metrics_monitor],
+            [eval_dori_metrics.get(x, None) for x in metrics_monitor]]
     df = pd.DataFrame(data=data, columns=metrics_monitor)
     if df_ex is not None:
         df = pd.concat([df_ex, df], axis=0)
