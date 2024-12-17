@@ -1,6 +1,8 @@
 from string import Template
 import os
 from omegaconf import OmegaConf
+from on_policy_data_gen.decode import all_ref_model_names, all_ref_models
+
 
 config_temp = Template(
     """
@@ -61,8 +63,6 @@ all_trainer_types = ["DPO-sigmoid", "alphaDPO", "SimPO", "IPO", "KTO", 'rDPO', '
 all_loss_types = ["sigmoid", "alpha-dpo", "simpo", "ipo", "kto", "rDPO", "sft-reg", "sft-reg-wot-ref"]
 
 
-all_ref_model_names = ["llama3-3b", "qwen25-3b"]
-all_ref_models = ["meta-llama/Llama-3.1-3B-Instruct", "Qwen/Qwen2.5-3B-Instruct"]
 
 
 cfg = OmegaConf.from_cli()

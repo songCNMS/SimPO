@@ -5,6 +5,7 @@ import os
 import argparse
 import json
 from gpt_api_config import *
+import torch
 
 # mistralai/Mistral-7B-Instruct-v0.2
 # google/gemma-2-9b-it
@@ -29,15 +30,19 @@ parser.add_argument('--output_dir', type=str, default="llama3.1_8B_ultrafeedback
                     help='output_dir')
 args = parser.parse_args()
 
-print(args)
 
+
+all_ref_model_names = ["llama3-3b", "qwen25-3b", "mistral-7b", "gemma2-9b"]
+all_ref_models = ["meta-llama/Llama-3.1-3B-Instruct", "Qwen/Qwen2.5-3B-Instruct", "mistralai/Mistral-7B-Instruct-v0.2", "google/gemma-2-9b-it"]
+
+ref_model_name = all_ref_model_names[all_ref_models.index(args.model)]
 
 # os.path.join(os.getenv('AMLT_OUTPUT_DIR', "./"), "./")
 # os.path.join(os.getenv('AMLT_DATA_DIR', "./"), "./")
-args.output_dir = os.path.join(os.getenv('AMLT_OUTPUT_DIR', "./"), "./data/")
+args.output_dir = os.path.join(os.getenv('AMLT_OUTPUT_DIR', "./"), f"./data/{ref_model_name}/")
 
 data_dir = args.data_dir
-llm = LLM(model=args.model)
+llm = LLM(model=args.model, tensor_parallel_size=torch.cuda.device_count())
 tokenizer = llm.get_tokenizer()
 
 train_dataset= load_dataset(data_dir, split='train_prefs')

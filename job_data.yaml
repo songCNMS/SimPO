@@ -43,12 +43,14 @@ search:
         _AZUREML_SINGULARITY_JOB_UAI: "/subscriptions/e033d461-1923-44a7-872b-78f1d35a86dd/resourcegroups/RAG-WUS/providers/Microsoft.ManagedIdentity/userAssignedIdentities/rag-workspace-eastus-mi"
     sku: 40G2
     command:
-    - python on_policy_data_gen/decode.py --seed {seed}
+    - python on_policy_data_gen/decode.py --seed {seed} --model {model}
   type: hyperdrive  # hyperparameter search type: hyperdrive, random, grid.  Default: hyperdrive
   sampling: grid  # how to explore the hyperparameter space: random, grid or bayesian. Default: bayesian
-  max_trials: 10
-  parallel_trials: 10  # number of trials to run in parallel. Default: equals to max_trials.
+  max_trials: 20
+  # parallel_trials: 10  # number of trials to run in parallel. Default: equals to max_trials.
   params:
+    - name: model
+      values: ["meta-llama/Llama-3.1-3B-Instruct", "Qwen/Qwen2.5-3B-Instruct"]
     - name: seed
       values: [41, 53, 101, 217, 18, 257, 120, 42, 100, 123]
       
