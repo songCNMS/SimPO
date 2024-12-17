@@ -8,7 +8,7 @@ environment:
 
   setup:
     - pip install -r environment_simpo.yaml
-    - pip install flash-attn --no-build-isolation
+    # - pip install flash-attn --no-build-isolation
     
 target:
   service: sing
@@ -39,7 +39,7 @@ search:
         _AZUREML_SINGULARITY_JOB_UAI: "/subscriptions/e033d461-1923-44a7-872b-78f1d35a86dd/resourcegroups/RAG-WUS/providers/Microsoft.ManagedIdentity/userAssignedIdentities/rag-workspace-eastus-mi"
     sku: 40G2
     command:
-    - python on_policy_data_gen/decode.py --seed {seed}
+    - python config_generator.py task=train trainer_types={trainer_types} ref_models={ref_models}
   type: hyperdrive  # hyperparameter search type: hyperdrive, random, grid.  Default: hyperdrive
   sampling: grid  # how to explore the hyperparameter space: random, grid or bayesian. Default: bayesian
   max_trials: 10
