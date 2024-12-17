@@ -163,5 +163,7 @@ cython_debug/
 data/
 wandb/
 datasets
-batch_trainer_configs
-gpt_api_config.py
+outputs
+logs
+logs_bak
+amlt

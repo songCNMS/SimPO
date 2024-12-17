@@ -1,0 +1,54 @@
+description: DPO
+
+
+environment:
+  image: lesong/nvidia-cuda:v5
+  username: f2e15e898c154795b7a8c9a9d936095d
+  registry: f2e15e898c154795b7a8c9a9d936095d.azurecr.io
+
+  setup:
+    - apt-get update
+    - apt-get install -y nvidia-container-toolkit
+    - export CUDA_HOME=/usr/local/cuda
+    - export LD_LIBRARY_PATH=/usr/local/nvidia/lib64:$$LD_LIBRARY_PATH
+    - pip install -r environment_simpo_data.yaml
+    - pip install flash-attn --no-build-isolation
+    
+target:
+  service: sing
+  # name: msrresrchvc
+  # name: msrresrchlab
+  name: palisades03
+  workspace_name: rag-workspace-eastus
+
+data:
+  local_dir: ./
+  remote_dir: data/
+
+code:
+  # local directory of the code. this will be uploaded to the server.
+  # $CONFIG_DIR is expanded to the directory of this config file
+  local_dir: ./
+
+
+search:
+  job_template:
+    # you may use {random_string:s} to avoid job name collisions
+    # {auto:3s} generates lr_0.00000_mom_0.5, .. etc
+    # {auto:2s} generates lr_0.00000_mo_0.5, .. etc
+    name: "{experiment_name:s}_{auto:3s}"
+    identity: managed
+    submit_args:
+      env:
+        _AZUREML_SINGULARITY_JOB_UAI: "/subscriptions/e033d461-1923-44a7-872b-78f1d35a86dd/resourcegroups/RAG-WUS/providers/Microsoft.ManagedIdentity/userAssignedIdentities/rag-workspace-eastus-mi"
+    sku: 40G2
+    command:
+    - python on_policy_data_gen/decode.py --seed {seed}
+  type: hyperdrive  # hyperparameter search type: hyperdrive, random, grid.  Default: hyperdrive
+  sampling: grid  # how to explore the hyperparameter space: random, grid or bayesian. Default: bayesian
+  max_trials: 10
+  parallel_trials: 10  # number of trials to run in parallel. Default: equals to max_trials.
+  params:
+    - name: seed
+      values: [41, 53, 101, 217, 18, 257, 120, 42, 100, 123]
+      

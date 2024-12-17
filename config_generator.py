@@ -2,7 +2,8 @@ from string import Template
 import os
 from omegaconf import OmegaConf
 
-config_temp = Template("""
+config_temp = Template(
+    """
 # Model arguments
 model_name_or_path: $ref_model
 torch_dtype: null
@@ -52,40 +53,70 @@ report_to:
 - wandb
 save_total_limit: 1
 seed: 42
-warmup_ratio: 0.1""")
+warmup_ratio: 0.1"""
+)
 
 os.makedirs("batch_trainer_configs", exist_ok=True)
-
-alpha = 0.4
-beta = 1.0
-# trainer_types = ["DPO-sigmoid", "alphaDPO", "SimPO", "IPO", "KTO", 'rDPO', 'SFTReg', "SFTRegWoTRef"]
-# loss_types = ["sigmoid", "alpha-dpo", "simpo", "ipo", "kto", "rDPO", "sft-reg", "sft-reg-wot-ref"]
-
-trainer_types = ['SFTReg', "DPO-sigmoid", "alphaDPO", "SimPO", "IPO", "KTO", 'rDPO']
-loss_types = ["sft-reg", "sigmoid", "alpha-dpo", "simpo", "ipo", "kto", "rDPO"]
+all_trainer_types = ["DPO-sigmoid", "alphaDPO", "SimPO", "IPO", "KTO", 'rDPO', 'SFTReg', "SFTRegWoTRef"]
+all_loss_types = ["sigmoid", "alpha-dpo", "simpo", "ipo", "kto", "rDPO", "sft-reg", "sft-reg-wot-ref"]
 
 
-ref_model_names = ["llama3-3b", "qwen25-3b"]
-ref_models = ["meta-llama/Llama-3.2-3B-Instruct", "Qwen/Qwen2.5-3B-Instruct"]
+all_ref_model_names = ["llama3-3b", "qwen25-3b"]
+all_ref_models = ["meta-llama/Llama-3.1-3B-Instruct", "Qwen/Qwen2.5-3B-Instruct"]
+
 
 cfg = OmegaConf.from_cli()
 task = cfg.get("task", "data")
+trainer_types = cfg.trainer_types.split(",")
+loss_types = [all_loss_types[all_trainer_types.index(trainer_type)] for trainer_type in trainer_types]
+ref_models = cfg.ref_models.split(",")
+ref_model_names = [all_ref_model_names[all_ref_models.index(ref_model)] for ref_model in ref_models]
+alpha = cfg.get("alpha", 0.4)
+beta = cfg.get("beta", 1.0)
+
+output_dir = os.path.join(os.getenv('AMLT_OUTPUT_DIR', "./"), "./")
+data_dir = os.path.join(os.getenv('AMLT_DATA_DIR', "./"), "./")
+
+
 
 for ref_model, ref_model_name in zip(ref_models, ref_model_names):
-  if task == "data":
-    os.system(f"python scripts/init_decode_data.py --train_model {ref_model} --ref_model {ref_model} --epoch 1 --algo cpo --num_samples 2000 --debug --output_dir datasets/{ref_model_name}-ori --ori_rej;")
-    os.system(f"python scripts/init_decode_data.py --train_model {ref_model} --ref_model {ref_model} --epoch 1 --algo cpo --num_samples 2000 --debug --output_dir datasets/{ref_model_name};")
-  else:
-    for loss_type, trainer_type in zip(loss_types, trainer_types):
-      cfg = config_temp.substitute(alpha=alpha, beta=beta, trainer_type=trainer_type, loss_type=loss_type, ref_model=ref_model, ref_model_name=ref_model_name)
-      config_loc = f"batch_trainer_configs/{ref_model_name}-{trainer_type}-beta{beta}-alpha{alpha}.yaml"
-      with open(config_loc, "w") as f:
-          f.writelines(cfg)
-      for epoch in range(1, 2):
-          os.system(f"python scripts/decode_data.py --ref_model {ref_model} --train_model /home/lesong/codes/SimPO/outputs/{loss_type}-{epoch} --epoch {epoch}  --algo {trainer_type} --output_dir datasets/{ref_model_name}-ori;")
-          os.system(f"python scripts/run_simpo.py {config_loc} epoch={epoch} data_dir=datasets/{ref_model_name}-ori;")
-          os.system(f"python scripts/run_simpo_eval.py {config_loc}  epoch={epoch} exp_name={loss_type}-{epoch} data_dir=datasets/{ref_model_name}-ori {ref_model_name}-{trainer_type}-beta{beta}-alpha{alpha}-ori;")
+    if task == "data":
+        os.system(
+            f"python scripts/init_decode_data.py --train_model {ref_model} --ref_model {ref_model} --epoch 1 --algo cpo --num_samples 2000 --debug --output_dir {output_dir}/datasets/{ref_model_name}-ori --ori_rej;"
+        )
+        os.system(
+            f"python scripts/init_decode_data.py --train_model {ref_model} --ref_model {ref_model} --epoch 1 --algo cpo --num_samples 2000 --debug --output_dir {output_dir}/datasets/{ref_model_name};"
+        )
+    else:
+        for loss_type, trainer_type in zip(loss_types, trainer_types):
+            cfg = config_temp.substitute(
+                alpha=alpha,
+                beta=beta,
+                trainer_type=trainer_type,
+                loss_type=loss_type,
+                ref_model=ref_model,
+                ref_model_name=ref_model_name,
+            )
+            config_loc = f"batch_trainer_configs/{ref_model_name}-{trainer_type}-beta{beta}-alpha{alpha}.yaml"
+            with open(config_loc, "w") as f:
+                f.writelines(cfg)
+            for epoch in range(1, 2):
+                os.system(
+                    f"python scripts/decode_data.py --ref_model {ref_model} --train_model {output_dir}/outputs/{loss_type}-{epoch} --epoch {epoch}  --algo {trainer_type} --output_dir {data_dir}/datasets/{ref_model_name}-ori;"
+                )
+                os.system(
+                    f"python scripts/run_simpo.py {config_loc} epoch={epoch} data_dir={data_dir}/datasets/{ref_model_name}-ori;"
+                )
+                os.system(
+                    f"python scripts/run_simpo_eval.py {config_loc}  epoch={epoch} exp_name={loss_type}-{epoch} data_dir={data_dir}/datasets/{ref_model_name}-ori run_name={ref_model_name}-ori;"
+                )
 
-          os.system(f"python scripts/decode_data.py --ref_model {ref_model} --train_model /home/lesong/codes/SimPO/outputs/{loss_type}-{epoch} --epoch {epoch}  --algo {trainer_type} --output_dir datasets/{ref_model_name};")
-          os.system(f"python scripts/run_simpo.py {config_loc} epoch={epoch} data_dir=datasets/{ref_model_name};")
-          os.system(f"python scripts/run_simpo_eval.py {config_loc}  epoch={epoch} exp_name={loss_type}-{epoch} data_dir=datasets/{ref_model_name} run_name={ref_model_name}-{trainer_type}-beta{beta}-alpha{alpha};")
+                os.system(
+                    f"python scripts/decode_data.py --ref_model {ref_model} --train_model {output_dir}/outputs/{loss_type}-{epoch} --epoch {epoch}  --algo {trainer_type} --output_dir {data_dir}/datasets/{ref_model_name};"
+                )
+                os.system(
+                    f"python scripts/run_simpo.py {config_loc} epoch={epoch} data_dir={data_dir}/datasets/{ref_model_name};"
+                )
+                os.system(
+                    f"python scripts/run_simpo_eval.py {config_loc}  epoch={epoch} exp_name={loss_type}-{epoch} data_dir={data_dir}/datasets/{ref_model_name} run_name={ref_model_name};"
+                )

@@ -89,8 +89,6 @@ if __name__ == "__main__":
         all_prompts = np.random.choice(all_prompts, size=args.num_samples, replace=False)
     
     prompt_resp_dict = defaultdict(list)
-
-    
     
     
     for i in range(10):

@@ -4,6 +4,13 @@ import os
 # os.environ["VLLM_ATTENTION_BACKEND"] = "FLASHINFER" # this is recommended for gemma-2 models; otherwise it is not needed
 import argparse
 import json
+from gpt_api_config import *
+
+# mistralai/Mistral-7B-Instruct-v0.2
+# google/gemma-2-9b-it
+# meta-llama/Llama-3.1-8B-Instruct
+# Qwen/Qwen2.5-7B-Instruct
+
 
 parser = argparse.ArgumentParser(description='Decode with vllm')
 parser.add_argument('--data_dir', type=str, default="HuggingFaceH4/ultrafeedback_binarized",
@@ -18,11 +25,16 @@ parser.add_argument('--max_tokens', type=int, default=4096,
                     help='Maximum number of tokens to generate')
 parser.add_argument('--seed', type=int, default=42,
                     help='Random seed')
-parser.add_argument('--output_dir', type=str, default="datasets/llama3.1_8B_ultrafeedback",
+parser.add_argument('--output_dir', type=str, default="llama3.1_8B_ultrafeedback",
                     help='output_dir')
 args = parser.parse_args()
 
 print(args)
+
+
+# os.path.join(os.getenv('AMLT_OUTPUT_DIR', "./"), "./")
+# os.path.join(os.getenv('AMLT_DATA_DIR', "./"), "./")
+args.output_dir = os.path.join(os.getenv('AMLT_OUTPUT_DIR', "./"), "./data/")
 
 data_dir = args.data_dir
 llm = LLM(model=args.model)
@@ -35,9 +47,9 @@ prompts = sorted(list(set(train_dataset['prompt'])))
 conversations = [tokenizer.apply_chat_template([{'role': 'user', 'content': prompt}], tokenize=False, add_generation_prompt=True) for prompt in prompts]
 
 sampling_params = SamplingParams(temperature=args.temperature, 
-                                 top_p=args.top_p, 
-                                 max_tokens=args.max_tokens, 
-                                 seed=args.seed,)
+                                top_p=args.top_p, 
+                                max_tokens=args.max_tokens, 
+                                seed=args.seed,)
 outputs = llm.generate(conversations, sampling_params)
 
 # Save the outputs as a JSON file.
