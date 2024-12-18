@@ -79,9 +79,9 @@ if __name__ == "__main__":
 
     d_prompts = sorted(list(set(d_prompts)))
     dbar_prompts = sorted(list(set(dbar_prompts)))
-    if len(dbar_prompts) > len(d_prompts)*0.2:
+    if len(dbar_prompts) > len(d_prompts):
         dbar_prompts = np.random.choice(
-            dbar_prompts, size=int(len(d_prompts)*0.2), replace=False
+            dbar_prompts, size=int(len(d_prompts)), replace=False
         )
 
     all_prompts = list(d_prompts) + list(dbar_prompts)

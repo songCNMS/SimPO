@@ -150,6 +150,7 @@ def apply_chat_template(
 
 
 def main(cfg, ep=1):
+    print(cfg)
     parser = H4ArgumentParser((ModelArguments, DataArguments, SimPOConfig))
     model_args, data_args, training_args = parser.parse()
     # training_args.output_dir = training_args.output_dir + f"_{ep}"
@@ -163,7 +164,7 @@ def main(cfg, ep=1):
     model_args.model_name_or_path = os.path.join(
         os.getenv("AMLT_OUTPUT_DIR", "./"),
         training_args.output_dir,
-        f"/{training_args.trainer_type}_{ep}",
+        f"{training_args.trainer_type}_{ep}",
     )
     #######
     # Setup

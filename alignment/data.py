@@ -209,6 +209,7 @@ def mix_datasets(
 
     raw_datasets = DatasetDict()
     raw_train_datasets = []
+    raw_test_datasets = []
     raw_val_datasets = []
     fracs = []
     for (ds, frac), ds_config in zip(dataset_mixer.items(), configs):
@@ -230,6 +231,8 @@ def mix_datasets(
             if "train" in split:
                 raw_train_datasets.append(dataset)
             elif "test" in split:
+                raw_test_datasets.append(dataset)
+            elif "val" in split:
                 raw_val_datasets.append(dataset)
             else:
                 raise ValueError(f"Split type {split} not recognized as one of test or train.")
@@ -247,11 +250,17 @@ def mix_datasets(
         else:
             raw_datasets["train"] = concatenate_datasets(train_subsets)
     # No subsampling for test datasets to enable fair comparison across models
+    if len(raw_test_datasets) > 0:
+        if shuffle:
+            raw_datasets["test"] = concatenate_datasets(raw_test_datasets).shuffle(seed=42)
+        else:
+            raw_datasets["test"] = concatenate_datasets(raw_test_datasets)
+            
     if len(raw_val_datasets) > 0:
         if shuffle:
-            raw_datasets["test"] = concatenate_datasets(raw_val_datasets).shuffle(seed=42)
+            raw_datasets["val"] = concatenate_datasets(raw_val_datasets).shuffle(seed=42)
         else:
-            raw_datasets["test"] = concatenate_datasets(raw_val_datasets)
+            raw_datasets["val"] = concatenate_datasets(raw_val_datasets)
 
     if len(raw_datasets) == 0:
         raise ValueError(

@@ -4,8 +4,8 @@ from omegaconf import OmegaConf
 
 
 
-all_ref_model_names = ["llama3-3b", "qwen25-3b", "mistral-7b", "gemma2-9b"]
-all_ref_models = ["meta-llama/Llama-3.2-3B-Instruct", "Qwen/Qwen2.5-3B-Instruct", "mistralai/Mistral-7B-Instruct-v0.2", "google/gemma-2-9b-it"]
+all_ref_model_names = ["llama3-8b", "qwen25-7b", "mistral-7b", "gemma2-9b"]
+all_ref_models = ["meta-llama/Llama-3.1-8B-Instruct", "Qwen/Qwen2.5-7B-Instruct", "mistralai/Mistral-7B-Instruct-v0.2", "google/gemma-2-9b-it"]
 
 
 if __name__ == "__main__":
@@ -19,10 +19,11 @@ if __name__ == "__main__":
 
     # Data training arguments
     dataset_mixer:
-    /home/lesong/codes/SimPO/datasets/$ref_model_name/: 1.0
+        /home/lesong/codes/SimPO/datasets/$ref_model_name/: 1.0
     dataset_splits:
-    - train
-    - test
+        - train
+        - test
+        - val
     preprocessing_num_workers: 12
 
     # AlphaDPOTrainer arguments
@@ -38,7 +39,7 @@ if __name__ == "__main__":
     gradient_accumulation_steps: 1
     gradient_checkpointing: true
     gradient_checkpointing_kwargs:
-    use_reentrant: False
+        use_reentrant: False
     hub_model_id: $loss_type-exps
     learning_rate: 1.0e-6
     log_level: info
@@ -46,7 +47,7 @@ if __name__ == "__main__":
     lr_scheduler_type: cosine
     max_length: 3072
     max_prompt_length: 5120
-    num_train_epochs: 3
+    num_train_epochs: 1
     optim: adamw_torch
     output_dir: outputs/$ref_model_name-alpha-$loss_type-v2
     run_name: $ref_model_name-$loss_type-beta$beta-alpha$alpha
@@ -72,7 +73,10 @@ if __name__ == "__main__":
 
     cfg = OmegaConf.from_cli()
     task = cfg.get("task", "data")
-    ref_models = cfg.ref_models.split(",")
+    if len(cfg.get("ref_models", "")) == 0:
+        ref_models = all_ref_models
+    else:
+        ref_models = cfg.ref_models.split(",")
     ref_model_names = [all_ref_model_names[all_ref_models.index(ref_model)] for ref_model in ref_models]
     alpha = cfg.get("alpha", 0.4)
     beta = cfg.get("beta", 1.0)
@@ -91,7 +95,10 @@ if __name__ == "__main__":
                 f"python scripts/init_decode_data.py --train_model {ref_model} --ref_model {ref_model} --epoch 1 --algo cpo --num_samples 2000 --output_dir {data_dir}/datasets/{ref_model_name};"
             )
         else:
-            trainer_types = cfg.trainer_types.split(",")
+            if len(cfg.get("trainer_types", "")) == 0:
+                trainer_types = all_trainer_types
+            else:
+                trainer_types = cfg.trainer_types.split(",")
             loss_types = [all_loss_types[all_trainer_types.index(trainer_type)] for trainer_type in trainer_types]
             for loss_type, trainer_type in zip(loss_types, trainer_types):
                 config = config_temp.substitute(
