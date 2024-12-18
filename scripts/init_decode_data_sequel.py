@@ -14,6 +14,7 @@ import random
 import copy
 import torch
 from config_generator import all_ref_model_names, all_ref_models
+from gpt_api_config import *
 
 
 parser = argparse.ArgumentParser(description="Decode with vllm")

@@ -44,7 +44,7 @@ search:
         _AZUREML_SINGULARITY_JOB_UAI: "/subscriptions/e033d461-1923-44a7-872b-78f1d35a86dd/resourcegroups/RAG-WUS/providers/Microsoft.ManagedIdentity/userAssignedIdentities/rag-workspace-eastus-mi"
     sku: 40G2
     command:
-    - python SimPO/scripts/init_decode_data_sequel.py --seed {seed} --ref_model {model}
+    - export PYTHONPATH=$$PWD; python scripts/init_decode_data_sequel.py --seed {seed} --ref_model {model}
   type: hyperdrive  # hyperparameter search type: hyperdrive, random, grid.  Default: hyperdrive
   sampling: grid  # how to explore the hyperparameter space: random, grid or bayesian. Default: bayesian
   max_trials: 40
