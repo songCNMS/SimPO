@@ -280,17 +280,18 @@ def main(cfg, ep=1):
 
     training_args.model_init_kwargs = model_kwargs
     
-    model = AutoModelForCausalLM.from_pretrained(model_args.model_name_or_path)
+    model = AutoModelForCausalLM.from_pretrained(model_args.model_name_or_path, attn_implementation="sdpa")
     model.resize_token_embeddings(len(tokenizer))
     model.config.pad_token_id = tokenizer.pad_token_id
     model.config.use_cache = False
     ref_model = AutoModelForCausalLM.from_pretrained(
 		ref_model,
+        attn_implementation="sdpa",
 		low_cpu_mem_usage=True,
 		torch_dtype=torch.bfloat16,
-		load_in_4bit=True,
-		use_flash_attention_2=True,
-		bnb_4bit_compute_dtype=torch.bfloat16,
+		# load_in_4bit=True,
+		# use_flash_attention_2=True,
+		# bnb_4bit_compute_dtype=torch.bfloat16,
 	).eval()
     peft_config = LoraConfig(
 		lora_alpha=128,

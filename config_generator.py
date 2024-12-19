@@ -1,6 +1,7 @@
 from string import Template
 import os
 from omegaconf import OmegaConf
+from gpt_api_config import *
 
 
 

@@ -15,9 +15,9 @@ environment:
     
 target:
   service: sing
-  # name: msrresrchvc
+  name: msrresrchvc
   # name: msrresrchlab
-  name: palisades03
+  # name: palisades03
   workspace_name: rag-workspace-eastus
 
 data:
@@ -40,7 +40,7 @@ search:
     submit_args:
       env:
         _AZUREML_SINGULARITY_JOB_UAI: "/subscriptions/e033d461-1923-44a7-872b-78f1d35a86dd/resourcegroups/RAG-WUS/providers/Microsoft.ManagedIdentity/userAssignedIdentities/rag-workspace-eastus-mi"
-    sku: 40G2
+    sku: 80G1
     command:
     - export PYTHONPATH=$$PWD; python config_generator.py task=train trainer_types={trainer_types} ref_models={ref_models}
   type: hyperdrive  # hyperparameter search type: hyperdrive, random, grid.  Default: hyperdrive
