@@ -7,6 +7,9 @@ environment:
   registry: f2e15e898c154795b7a8c9a9d936095d.azurecr.io
 
   setup:
+    - export PATH=$$HOME/.local/bin:$$PATH
+    - export PYTHONPATH=$$PWD:$$HOME/.local/bin:$$PYTHONPATH
+    - export LD_LIBRARY_PATH=$$HOME/.local/bin:$$LD_LIBRARY_PATH
     - pip install -r environment_simpo.yaml
     # - pip install flash-attn --no-build-isolation
     
@@ -37,15 +40,16 @@ search:
     submit_args:
       env:
         _AZUREML_SINGULARITY_JOB_UAI: "/subscriptions/e033d461-1923-44a7-872b-78f1d35a86dd/resourcegroups/RAG-WUS/providers/Microsoft.ManagedIdentity/userAssignedIdentities/rag-workspace-eastus-mi"
-    sku: 40G8
+    sku: 40G2
     command:
     - export PYTHONPATH=$$PWD; python config_generator.py task=train trainer_types={trainer_types} ref_models={ref_models}
   type: hyperdrive  # hyperparameter search type: hyperdrive, random, grid.  Default: hyperdrive
   sampling: grid  # how to explore the hyperparameter space: random, grid or bayesian. Default: bayesian
   max_trials: 28
-  parallel_trials: 2  # number of trials to run in parallel. Default: equals to max_trials.
+  parallel_trials: 6  # number of trials to run in parallel. Default: equals to max_trials.
   params:
     - name: trainer_types
       values: ["SFTReg", "DPO-sigmoid", "alphaDPO", "SimPO", "IPO", "KTO", "rDPO"]
     - name: ref_models
-      values: ["meta-llama/Llama-3.1-8B-Instruct", "Qwen/Qwen2.5-7B-Instruct", "mistralai/Mistral-7B-Instruct-v0.2", "google/gemma-2-9b-it"]
+      values: ["meta-llama/Llama-3.1-8B-Instruct", "Qwen/Qwen2.5-7B-Instruct"]
+      #, "mistralai/Mistral-7B-Instruct-v0.2", "google/gemma-2-9b-it"]

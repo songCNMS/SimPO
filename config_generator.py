@@ -117,7 +117,7 @@ if __name__ == "__main__":
                         f"python scripts/decode_data.py --ref_model {ref_model} --train_model {output_dir}/outputs/{loss_type}-{epoch} --epoch {epoch}  --algo {trainer_type} --output_dir {data_dir}/datasets/{ref_model_name}-ori;"
                     )
                     os.system(
-                        f"python scripts/run_simpo.py {config_loc} epoch={epoch} data_dir={data_dir}/datasets/{ref_model_name}-ori;"
+                        f"accelerate launch --config-file accelerate_configs/multi_gpu.yaml scripts/run_simpo.py {config_loc} epoch={epoch} data_dir={data_dir}/datasets/{ref_model_name}-ori;"
                     )
                     os.system(
                         f"python scripts/run_simpo_eval.py {config_loc}  epoch={epoch} exp_name={loss_type}-{epoch} data_dir={data_dir}/datasets/{ref_model_name}-ori run_name={ref_model_name}-ori;"
@@ -127,7 +127,7 @@ if __name__ == "__main__":
                         f"python scripts/decode_data.py --ref_model {ref_model} --train_model {output_dir}/outputs/{loss_type}-{epoch} --epoch {epoch}  --algo {trainer_type} --output_dir {data_dir}/datasets/{ref_model_name};"
                     )
                     os.system(
-                        f"python scripts/run_simpo.py {config_loc} epoch={epoch} data_dir={data_dir}/datasets/{ref_model_name};"
+                        f"accelerate launch --config-file accelerate_configs/multi_gpu.yaml scripts/run_simpo.py {config_loc} epoch={epoch} data_dir={data_dir}/datasets/{ref_model_name};"
                     )
                     os.system(
                         f"python scripts/run_simpo_eval.py {config_loc}  epoch={epoch} exp_name={loss_type}-{epoch} data_dir={data_dir}/datasets/{ref_model_name} run_name={ref_model_name};"

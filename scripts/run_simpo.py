@@ -19,9 +19,8 @@ import sys
 
 import torch
 import transformers
-from transformers import AutoModelForCausalLM, set_seed
+from transformers import AutoModelForCausalLM, set_seed, AutoTokenizer
 import subprocess
-
 
 from alignment import (
     DataArguments,
@@ -37,7 +36,7 @@ from alignment import (
     is_adapter_model,
 )
 from alignment.data import maybe_insert_system_message, is_openai_format
-from peft import PeftConfig, PeftModel
+from peft import PeftConfig, PeftModel, LoraConfig, get_peft_model
 from simpo_trainer import SimPOTrainer
 from dpo_trainer import AlphaDPOTrainer
 from simpo_config import SimPOConfig
@@ -130,17 +129,21 @@ def apply_chat_template(
 def main(cfg, ep=1):
     parser = H4ArgumentParser((ModelArguments, DataArguments, SimPOConfig))
     model_args, data_args, training_args = parser.parse()
+    
     output_dir = os.path.join(
         os.getenv("AMLT_OUTPUT_DIR", "./"),
         training_args.output_dir)
     training_args.output_dir = output_dir + f"/{training_args.trainer_type}_{ep}"
+
+    os.makedirs(training_args.output_dir, exist_ok=True)
+    
     data_dir = list(data_args.dataset_mixer.keys())[0]
     if cfg.get("data_dir", None) is not None:
         data_dir = cfg["data_dir"]
     data_args.dataset_mixer = {f"{data_dir}/{training_args.trainer_type}_dataset_{ep}": 1.0}
     ref_model = model_args.model_name_or_path
-    if ep > 1:
-        model_args.model_name_or_path = output_dir + f"/{training_args.trainer_type}_{ep-1}"
+    # if ep > 1:
+    #     model_args.model_name_or_path = output_dir + f"/{training_args.trainer_type}_{ep-1}"
     
     #######
     # Setup
@@ -250,7 +253,7 @@ def main(cfg, ep=1):
         attn_implementation=model_args.attn_implementation,
     )
 
-    model = model_args.model_name_or_path
+    # model = model_args.model_name_or_path
     # seems to require internet
     # if is_adapter_model(model, model_args.model_revision) is True:
     #     logger.info(f"Loading SFT adapter for {model_args.model_name_or_path=}")
@@ -276,6 +279,33 @@ def main(cfg, ep=1):
     #     model_kwargs = None
 
     training_args.model_init_kwargs = model_kwargs
+    
+    model = AutoModelForCausalLM.from_pretrained(model_args.model_name_or_path)
+    model.resize_token_embeddings(len(tokenizer))
+    model.config.pad_token_id = tokenizer.pad_token_id
+    model.config.use_cache = False
+    ref_model = AutoModelForCausalLM.from_pretrained(
+		ref_model,
+		low_cpu_mem_usage=True,
+		torch_dtype=torch.bfloat16,
+		load_in_4bit=True,
+		use_flash_attention_2=True,
+		bnb_4bit_compute_dtype=torch.bfloat16,
+	).eval()
+    peft_config = LoraConfig(
+		lora_alpha=128,
+		lora_dropout=0.05,
+		r=64,
+		bias="none",
+		task_type="CAUSAL_LM",
+		target_modules=[
+			"q_proj",
+			"k_proj",
+			"v_proj",
+		],
+	)
+    model = get_peft_model(model, peft_config)
+    training_args.model_init_kwargs = None
     
     #########################
     # Instantiate SimPO trainer
