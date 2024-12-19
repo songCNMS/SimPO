@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     # Data training arguments
     dataset_mixer:
-        /home/lesong/codes/SimPO/datasets/$ref_model_name/: 1.0
+        ./datasets/$ref_model_name/: 1.0
     dataset_splits:
         - train
         - test
@@ -27,7 +27,7 @@ if __name__ == "__main__":
     preprocessing_num_workers: 12
 
     # AlphaDPOTrainer arguments
-    fp16: true
+    bf16: true
     beta: $beta
     gamma_beta_ratio: 0.4
     alpha: $alpha
@@ -82,17 +82,17 @@ if __name__ == "__main__":
     beta = cfg.get("beta", 1.0)
 
     output_dir = os.path.join(os.getenv('AMLT_OUTPUT_DIR', "./"), "./")
-    data_dir = os.path.join(os.getenv('AMLT_DATA_DIR', "./"), "./")
+    data_dir = os.path.join(os.getenv('AMLT_DATA_DIR', "./"), "./data/")
 
 
 
     for ref_model, ref_model_name in zip(ref_models, ref_model_names):
         if task == "data":
             os.system(
-                f"python scripts/init_decode_data.py --train_model {ref_model} --ref_model {ref_model} --epoch 1 --algo cpo --num_samples 2000 --output_dir {data_dir}/datasets/{ref_model_name}-ori --ori_rej;"
+                f"python scripts/init_decode_data.py --train_model {ref_model} --ref_model {ref_model} --epoch 1 --algo cpo --num_samples 2000 --debug --output_dir {data_dir}/datasets/{ref_model_name}-ori --ori_rej;"
             )
             os.system(
-                f"python scripts/init_decode_data.py --train_model {ref_model} --ref_model {ref_model} --epoch 1 --algo cpo --num_samples 2000 --output_dir {data_dir}/datasets/{ref_model_name};"
+                f"python scripts/init_decode_data.py --train_model {ref_model} --ref_model {ref_model} --epoch 1 --algo cpo --num_samples 2000 --debug --output_dir {data_dir}/datasets/{ref_model_name};"
             )
         else:
             if len(cfg.get("trainer_types", "")) == 0:
