@@ -21,6 +21,8 @@ import torch
 import transformers
 from transformers import AutoModelForCausalLM, set_seed, AutoTokenizer
 import subprocess
+from config_generator import all_ref_model_names, all_ref_models
+
 
 from alignment import (
     DataArguments,
@@ -129,6 +131,8 @@ def apply_chat_template(
 def main(cfg, ep=1):
     parser = H4ArgumentParser((ModelArguments, DataArguments, SimPOConfig))
     model_args, data_args, training_args = parser.parse()
+    ref_model = model_args.model_name_or_path
+    # ref_model_name = all_ref_model_names[all_ref_models.index(cfg.ref_model)]
     
     output_dir = os.path.join(
         os.getenv("AMLT_OUTPUT_DIR", "./"),
@@ -140,8 +144,8 @@ def main(cfg, ep=1):
     data_dir = list(data_args.dataset_mixer.keys())[0]
     if cfg.get("data_dir", None) is not None:
         data_dir = cfg["data_dir"]
-    data_args.dataset_mixer = {f"{data_dir}/{training_args.trainer_type}_dataset_{ep}": 1.0}
-    ref_model = model_args.model_name_or_path
+    # data_args.dataset_mixer = {f"{data_dir}/{ref_model_name}_dataset_{ep}": 1.0}
+    data_args.dataset_mixer = {data_dir: 1.0}
     # if ep > 1:
     #     model_args.model_name_or_path = output_dir + f"/{training_args.trainer_type}_{ep-1}"
     
