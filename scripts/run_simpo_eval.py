@@ -22,6 +22,7 @@ import transformers
 from transformers import AutoModelForCausalLM, set_seed
 import subprocess
 import datasets
+from peft import AutoPeftModelForCausalLM
 
 
 from alignment import (
@@ -157,8 +158,11 @@ def main(cfg, ep=1):
     data_dir = list(data_args.dataset_mixer.keys())[0]
     if cfg.get("data_dir", None) is not None:
         data_dir = cfg["data_dir"]
+    # data_args.dataset_mixer = {
+    #     f"{data_dir}/{training_args.trainer_type}_dataset_{ep}": 1.0
+    # }
     data_args.dataset_mixer = {
-        f"{data_dir}/{training_args.trainer_type}_dataset_{ep}": 1.0
+        data_dir: 1.0
     }
     ref_model = model_args.model_name_or_path
     model_args.model_name_or_path = os.path.join(
@@ -255,6 +259,7 @@ def main(cfg, ep=1):
     # Replace column names with what TRL needs, text_chosen -> chosen and text_rejected -> rejected
 
     for split in ["train", "test", "val"]:
+        if split not in raw_datasets: continue
         raw_datasets[split] = raw_datasets[split].rename_columns(
             {
                 "text_prompt": "prompt",
@@ -272,12 +277,16 @@ def main(cfg, ep=1):
         else:
             eval_dbar_list.append(item)
 
-    for item in raw_datasets["val"]:
-        eval_dori_list.append(item)
+    if "val" in raw_datasets:
+        for item in raw_datasets["val"]:
+            eval_dori_list.append(item)
 
     eval_d_dataset = datasets.Dataset.from_list(eval_d_list)
     eval_dbar_dataset = datasets.Dataset.from_list(eval_dbar_list)
-    eval_dori_dataset = datasets.Dataset.from_list(eval_dori_list)
+    if len(eval_dori_list) > 0:
+        eval_dori_dataset = datasets.Dataset.from_list(eval_dori_list)
+    else:
+        eval_dori_dataset = None
 
     model = model_args.model_name_or_path
 
@@ -314,7 +323,41 @@ def main(cfg, ep=1):
     #     peft_config=get_peft_config(model_args),
     # )
     # else:
-    training_args.ref_model_init_kwargs = model_kwargs
+    training_args.ref_model_init_kwargs = None
+    
+    
+    # model = AutoModelForCausalLM.from_pretrained(model_args.model_name_or_path, attn_implementation="sdpa")
+    
+    ref_model = AutoModelForCausalLM.from_pretrained(
+		ref_model,
+        attn_implementation="sdpa",
+		low_cpu_mem_usage=True,
+		torch_dtype=torch.bfloat16,
+		# load_in_4bit=True,
+		# use_flash_attention_2=True,
+		# bnb_4bit_compute_dtype=torch.bfloat16,
+	).eval()
+    # peft_config = LoraConfig(
+	# 	lora_alpha=128,
+	# 	lora_dropout=0.05,
+	# 	r=64,
+	# 	bias="none",
+	# 	task_type="CAUSAL_LM",
+	# 	target_modules=[
+	# 		"q_proj",
+	# 		"k_proj",
+	# 		"v_proj",
+	# 	],
+	# )
+    # model = get_peft_model(model, peft_config)
+    training_args.model_init_kwargs = None
+    
+    model = AutoPeftModelForCausalLM.from_pretrained(model_args.model_name_or_path, attn_implementation="sdpa")
+    model.resize_token_embeddings(len(tokenizer))
+    model.config.pad_token_id = tokenizer.pad_token_id
+    model.config.use_cache = False
+    model.eval()
+    
     trainer = AlphaDPOTrainer(
         model=model,
         ref_model=ref_model,
@@ -345,7 +388,7 @@ def main(cfg, ep=1):
     #     peft_config=get_peft_config(model_args),
     # )
     # else:
-    training_args.ref_model_init_kwargs = model_kwargs
+    # training_args.ref_model_init_kwargs = model_kwargs
     trainer = AlphaDPOTrainer(
         model=model,
         ref_model=ref_model,
@@ -370,27 +413,28 @@ def main(cfg, ep=1):
     # trainer.save_metrics("eval", metrics)
 
     # logger.info("*** Training complete! ***")
-
-    training_args.ref_model_init_kwargs = model_kwargs
-    trainer = AlphaDPOTrainer(
-        model=model,
-        ref_model=ref_model,
-        args=training_args,
-        train_dataset=raw_datasets["test"],
-        eval_dataset=eval_dori_dataset,
-        tokenizer=tokenizer,
-        peft_config=get_peft_config(model_args),
-        max_length=training_args.max_length,
-        max_prompt_length=training_args.max_prompt_length,
-        loss_type=training_args.loss_type,
-    )
-
-    ##########
-    # Evaluate
-    ##########
-    logger.info("*** Evaluate DBAR***")
-    eval_dori_metrics = trainer.evaluate()
-    eval_dori_metrics["eval_samples"] = len(eval_dori_dataset)
+    if eval_dori_dataset is not None:
+        training_args.ref_model_init_kwargs = model_kwargs
+        trainer = AlphaDPOTrainer(
+            model=model,
+            ref_model=ref_model,
+            args=training_args,
+            train_dataset=raw_datasets["test"],
+            eval_dataset=eval_dori_dataset,
+            tokenizer=tokenizer,
+            peft_config=get_peft_config(model_args),
+            max_length=training_args.max_length,
+            max_prompt_length=training_args.max_prompt_length,
+            loss_type=training_args.loss_type,
+        )
+        ##########
+        # Evaluate
+        ##########
+        logger.info("*** Evaluate DBAR***")
+        eval_dori_metrics = trainer.evaluate()
+        eval_dori_metrics["eval_samples"] = len(eval_dori_dataset)
+    else:
+        eval_dori_metrics = None
     return eval_d_metrics, eval_dbar_metrics, eval_dori_metrics
 
 
@@ -407,7 +451,8 @@ if __name__ == "__main__":
     eval_d_metrics, eval_dbar_metrics, eval_dori_metrics = main(cfg, ep=ep)
     eval_d_metrics["exp_name"] = f"D_{exp_name}_{ep}"
     eval_dbar_metrics["exp_name"] = f"DBAR_{exp_name}_{ep}"
-    eval_dori_metrics["exp_name"] = f"DORI_{exp_name}_{ep}"
+    if eval_dori_metrics is not None:
+        eval_dori_metrics["exp_name"] = f"DORI_{exp_name}_{ep}"
     run_name = cfg.get("run_name", datetime.today().strftime("%Y%m%d%H%M%S"))
 
     output_dir_loc = os.path.join(os.getenv("AMLT_OUTPUT_DIR", f"./logs/{run_name}/"))
@@ -415,7 +460,8 @@ if __name__ == "__main__":
     with jsonlines.open(f"{output_dir_loc}/metrics.jsonl", "a") as writter:
         writter.write(eval_d_metrics)
         writter.write(eval_dbar_metrics)
-        writter.write(eval_dori_metrics)
+        if eval_dori_metrics is not None:
+            writter.write(eval_dori_metrics)
 
     logging.basicConfig(
         level=logging.INFO,
@@ -440,8 +486,9 @@ if __name__ == "__main__":
     data = [
         [eval_d_metrics.get(x, None) for x in metrics_monitor],
         [eval_dbar_metrics.get(x, None) for x in metrics_monitor],
-        [eval_dori_metrics.get(x, None) for x in metrics_monitor],
     ]
+    if eval_dori_metrics is not None:
+        data.append([eval_dori_metrics.get(x, None) for x in metrics_monitor])
     df = pd.DataFrame(data=data, columns=metrics_monitor)
     if df_ex is not None:
         df = pd.concat([df_ex, df], axis=0)
