@@ -20,33 +20,33 @@ generation_file = args.generation_file
 with open(generation_file, 'r') as f:
     output_data = json.load(f)
 
-inputs = [data["prompt"] for data in output_data]
-candidates_texts = [data["all_generated_responses"] for data in output_data]
+# inputs = [data["prompt"] for data in output_data]
+# candidates_texts = [data["all_generated_responses"] for data in output_data]
 
-model = AutoModelForSequenceClassification.from_pretrained(args.reward_model, 
-                                                           device_map="cuda", 
-                                                           trust_remote_code=True, torch_dtype=torch.bfloat16)
-tokenizer = AutoTokenizer.from_pretrained(args.reward_model, use_fast=True)
+# model = AutoModelForSequenceClassification.from_pretrained(args.reward_model, 
+#                                                            device_map="cuda", 
+#                                                            trust_remote_code=True, torch_dtype=torch.bfloat16)
+# tokenizer = AutoTokenizer.from_pretrained(args.reward_model, use_fast=True)
 
-for data in tqdm.tqdm(output_data):
-    prompt = data["prompt"]
-    candidates = data["all_generated_responses"]
-    scores = []
-    for candidate in candidates:
-        messages = [{"role": "user", "content": prompt},
-                    {"role": "assistant", "content": candidate}]
-        input_ids = tokenizer.apply_chat_template(messages, return_tensors="pt").to("cuda")
-        with torch.no_grad():
-            output = model(input_ids)
-            score = output.score.float().item()
-            scores.append(score)
-    data["all_rm_scores"] = scores
+# for data in tqdm.tqdm(output_data):
+#     prompt = data["prompt"]
+#     candidates = data["all_generated_responses"]
+#     scores = []
+#     for candidate in candidates:
+#         messages = [{"role": "user", "content": prompt},
+#                     {"role": "assistant", "content": candidate}]
+#         input_ids = tokenizer.apply_chat_template(messages, return_tensors="pt").to("cuda")
+#         with torch.no_grad():
+#             output = model(input_ids)
+#             score = output.score.float().item()
+#             scores.append(score)
+#     data["all_rm_scores"] = scores
 
 file_name = os.path.basename(args.generation_file).split('.json')[0] + "_rm.json"
-with open(os.path.join(args.output_dir, file_name), 'w') as f:
-    json.dump(output_data, f, indent=4)
+# with open(os.path.join(args.output_dir, file_name), 'w') as f:
+#     json.dump(output_data, f, indent=4)
 
-print(f"Annotated outputs saved to {os.path.join(args.output_dir, file_name)}")
+# print(f"Annotated outputs saved to {os.path.join(args.output_dir, file_name)}")
 
 # Binarize data: win = highest scoring reponse; lose = lowest scoring response
 for data in output_data:
@@ -74,6 +74,8 @@ for data in output_data:
         "chosen": chosen,
         "rejected": rejected,
     })
+
+os.makedirs(args.output_dir, exist_ok=True)
 
 output_file = os.path.basename(args.generation_file).split('.json')[0] + "_bin.json"
 with open(os.path.join(args.output_dir, file_name), 'w') as f:

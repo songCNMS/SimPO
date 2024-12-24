@@ -42,9 +42,9 @@ if __name__ == "__main__":
     
     ref_model_name = all_ref_model_names[all_ref_models.index(args.ref_model)]
     
-    output_file = f'all_train_data_{args.algo}_{args.epoch}.json'
-    if os.path.exists(os.path.join(args.output_dir, output_file)):
-        sys.exit(0)
+    # output_file = f'all_train_data_{args.algo}_{args.epoch}.json'
+    # if os.path.exists(os.path.join(args.output_dir, output_file)):
+    #     sys.exit(0)
     
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
@@ -58,8 +58,9 @@ if __name__ == "__main__":
 
     output_data = []
 
-    dataset = load_from_disk(f"datasets/{ref_model_name}")
+    dataset = load_from_disk(f"{data_dir_loc}/{ref_model_name}")
     for data in dataset:
+        if data["type"] == "DBAR" and random.random() >= 0.2: continue
         data['alpha'] = 0.0
         output_data.append(data)
         for _ in range(4):
@@ -97,5 +98,5 @@ if __name__ == "__main__":
     dataset = datasets.Dataset.from_list(output_data)
     dataset = dataset.train_test_split(test_size=0.3)
     
-    dataset.save_to_disk(os.path.join(args.output_dir, f"{ref_model_name}"))
+    dataset.save_to_disk(os.path.join(args.output_dir, f"{ref_model_name}/"))
     sys.exit(0)

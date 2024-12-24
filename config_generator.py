@@ -126,9 +126,9 @@ if __name__ == "__main__":
                     # os.system(
                     #     f"python scripts/decode_data.py --ref_model {ref_model} --train_model {output_dir}/outputs/{loss_type}-{epoch} --epoch {epoch}  --algo {trainer_type} --output_dir {data_dir}/datasets/{ref_model_name};"
                     # )
-                    # os.system(
-                    #     f"python scripts/run_simpo.py {config_loc} epoch={epoch} data_dir={data_dir}/datasets/{ref_model_name};"
-                    # )
+                    os.system(
+                        f"python scripts/run_simpo.py {config_loc} epoch={epoch} data_dir={data_dir}/datasets/{ref_model_name};"
+                    )
                     os.system(
                         f"python scripts/run_simpo_eval.py {config_loc}  epoch={epoch} exp_name={loss_type}-{epoch} data_dir={data_dir}/datasets/{ref_model_name} run_name={ref_model_name};"
                     )

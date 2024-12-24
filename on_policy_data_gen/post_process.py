@@ -2,6 +2,10 @@ import json
 import argparse
 import os
 from glob import glob
+import jsonlines
+from json import encoder
+
+encoder.FLOAT_REPR = lambda o: format(o, '.14f')
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -19,13 +23,13 @@ generation_file_dir = f"datasets/{args.model}"
 
 all_data = []
 for file_name in glob(
-    f"./amlt/dpo_data_ultrafeedback/*/data/{args.model}/output_*.json"
+    f"/home/lesong/codes/SimPO/amlt/dpo_mp_data/*/mh/all_train_data_{args.model}_*.json"
 ):
     generation_file = file_name
     print(file_name)
-    with open(generation_file, "r") as f:
-        output_data = json.load(f)
-        all_data.append(output_data)
+    with jsonlines.open(generation_file, "r") as reader:
+        # output_data = json.load(f)
+        all_data.append([obj for obj in reader])
 
 num_samples = len(all_data[0])
 all_res = []
@@ -33,8 +37,10 @@ num_identical = 0
 for i in range(num_samples):
     prompt = all_data[0][i]["prompt"]
     gen_text = []
+    scores = []
     for data in all_data:
-        gen_text.append(data[i]["generated_text"])
+        gen_text.append(data[i]["model_response"])
+        scores.append(data[i]["model_response_logprob"])
 
     if len(set(gen_text)) == 1:
         # filter out samples where all generated responses are identical
@@ -44,7 +50,9 @@ for i in range(num_samples):
     all_res.append(
         {
             "prompt": prompt,
+            "type": all_data[0][i]["type"],
             "all_generated_responses": gen_text,
+            "all_rm_scores": scores,
         }
     )
 
