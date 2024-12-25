@@ -6,7 +6,7 @@ from gpt_api_config import *
 
 
 all_ref_model_names = ["llama3-8b", "qwen25-7b", "mistral-7b", "gemma2-9b"]
-all_ref_models = ["meta-llama/Llama-3.2-3B-Instruct", "Qwen/Qwen2.5-7B-Instruct", "mistralai/Mistral-7B-Instruct-v0.2", "google/gemma-2-9b-it"]
+all_ref_models = ["meta-llama/Llama-3.1-8B-Instruct", "Qwen/Qwen2.5-7B-Instruct", "mistralai/Mistral-7B-Instruct-v0.2", "google/gemma-2-9b-it"]
 
 
 if __name__ == "__main__":
