@@ -6,7 +6,7 @@ from gpt_api_config import *
 
 
 all_ref_model_names = ["llama3-8b", "qwen25-7b", "mistral-7b", "gemma2-9b"]
-all_ref_models = ["meta-llama/Llama-3.1-8B-Instruct", "Qwen/Qwen2.5-7B-Instruct", "mistralai/Mistral-7B-Instruct-v0.2", "google/gemma-2-9b-it"]
+all_ref_models = ["meta-llama/Llama-3.2-3B-Instruct", "Qwen/Qwen2.5-7B-Instruct", "mistralai/Mistral-7B-Instruct-v0.2", "google/gemma-2-9b-it"]
 
 
 if __name__ == "__main__":
@@ -45,8 +45,8 @@ if __name__ == "__main__":
     log_level: info
     logging_steps: 1000
     lr_scheduler_type: cosine
-    max_length: 3072
-    max_prompt_length: 5120
+    max_length: 2048
+    max_prompt_length: 1800
     num_train_epochs: 1
     optim: adamw_torch
     output_dir: outputs/$ref_model_name-alpha-$loss_type-v2
@@ -65,10 +65,11 @@ if __name__ == "__main__":
     )
 
     os.makedirs("batch_trainer_configs", exist_ok=True)
-    all_trainer_types = ["DPO-sigmoid", "alphaDPO", "SimPO", "IPO", "KTO", 'rDPO', 'SFTReg', "SFTRegWoTRef"]
-    all_loss_types = ["sigmoid", "alpha-dpo", "simpo", "ipo", "kto", "rDPO", "sft-reg", "sft-reg-wot-ref"]
+    # all_trainer_types = ["DPO-sigmoid", "alphaDPO", "SimPO", "IPO", "KTO", 'rDPO', 'SFTReg', "SFTRegWoTRef"]
+    # all_loss_types = ["sigmoid", "alpha-dpo", "simpo", "ipo", "kto", "rDPO", "sft-reg", "sft-reg-wot-ref"]
 
-
+    all_trainer_types = ["SimPO", "IPO", "KTO", 'rDPO', 'SFTReg', "SFTRegWoTRef"]
+    all_loss_types = ["simpo", "ipo", "kto", "rDPO", "sft-reg", "sft-reg-wot-ref"]
 
 
     cfg = OmegaConf.from_cli()
@@ -129,6 +130,6 @@ if __name__ == "__main__":
                     os.system(
                         f"python scripts/run_simpo.py {config_loc} epoch={epoch} data_dir={data_dir}/datasets/{ref_model_name};"
                     )
-                    os.system(
-                        f"python scripts/run_simpo_eval.py {config_loc}  epoch={epoch} exp_name={loss_type}-{epoch} data_dir={data_dir}/datasets/{ref_model_name} run_name={ref_model_name};"
-                    )
+                    # os.system(
+                    #     f"python scripts/run_simpo_eval.py {config_loc}  epoch={epoch} exp_name={loss_type}-{epoch} data_dir={data_dir}/datasets/{ref_model_name} run_name={ref_model_name};"
+                    # )

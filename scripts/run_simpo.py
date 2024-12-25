@@ -188,6 +188,8 @@ def main(cfg, ep=1):
         # seed=training_args.seed,
     )
     
+    # for key in raw_datasets:
+    #     raw_datasets[key] = raw_datasets[key][:1000]
     
     logger.info(
         f"Training on the following splits: {[split + ' : ' + str(dset.num_rows) for split, dset in raw_datasets.items()]}"
@@ -284,15 +286,19 @@ def main(cfg, ep=1):
 
     training_args.model_init_kwargs = model_kwargs
     
-    model = AutoModelForCausalLM.from_pretrained(model_args.model_name_or_path, attn_implementation="sdpa")
+    model = AutoModelForCausalLM.from_pretrained(model_args.model_name_or_path, 
+                                                 attn_implementation="flash_attention_2",
+                                                 low_cpu_mem_usage=True,
+                                                #  torch_dtype=torch.bfloat16
+                                                 )
     model.resize_token_embeddings(len(tokenizer))
     model.config.pad_token_id = tokenizer.pad_token_id
     model.config.use_cache = False
     ref_model = AutoModelForCausalLM.from_pretrained(
 		ref_model,
-        attn_implementation="sdpa",
+        attn_implementation="flash_attention_2",
 		low_cpu_mem_usage=True,
-		torch_dtype=torch.bfloat16,
+		# torch_dtype=torch.bfloat16,
 		# load_in_4bit=True,
 		# use_flash_attention_2=True,
 		# bnb_4bit_compute_dtype=torch.bfloat16,

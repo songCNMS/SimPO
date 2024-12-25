@@ -297,8 +297,8 @@ class AlphaDPOTrainer(DPOTrainer):
                         _,
                     ) = self.concatenated_forward(self.ref_model, batch)
 
-        # print("policy_chosen_logps, policy_rejected_logps, reference_chosen_logps, reference_rejected_logps")
-        # print(policy_chosen_logps, policy_rejected_logps, reference_chosen_logps, reference_rejected_logps)
+        print("policy_chosen_logps, policy_rejected_logps, reference_chosen_logps, reference_rejected_logps")
+        print(policy_chosen_logps, policy_rejected_logps, reference_chosen_logps, reference_rejected_logps)
         alphas = (
             torch.Tensor(batch["alpha"])
             .to(torch.float16)
@@ -401,7 +401,7 @@ class AlphaDPOTrainer(DPOTrainer):
         )
 
         all_logps /= logps_len
-        print("all_logps: ", all_logps)
+        print("all_logps: ", all_logps, logps_len)
 
         chosen_logps = all_logps[:len_chosen]
         rejected_logps = all_logps[len_chosen:]

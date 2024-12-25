@@ -251,10 +251,14 @@ def mix_datasets(
             raw_datasets["train"] = concatenate_datasets(train_subsets)
     # No subsampling for test datasets to enable fair comparison across models
     if len(raw_test_datasets) > 0:
+        test_subsets = []
+        for dataset, frac in zip(raw_test_datasets, fracs):
+            test_subset = dataset.select(range(int(frac * len(dataset))))
+            test_subsets.append(test_subset)
         if shuffle:
-            raw_datasets["test"] = concatenate_datasets(raw_test_datasets).shuffle(seed=42)
+            raw_datasets["test"] = concatenate_datasets(test_subsets).shuffle(seed=42)
         else:
-            raw_datasets["test"] = concatenate_datasets(raw_test_datasets)
+            raw_datasets["test"] = concatenate_datasets(test_subsets)
             
     if len(raw_val_datasets) > 0:
         if shuffle:
